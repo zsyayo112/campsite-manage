@@ -1,0 +1,325 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"  // 开发环境
+  // provider = "postgresql"  // 生产环境
+  url      = env("DATABASE_URL")
+}
+
+// ==================== 用户认证 ====================
+
+model User {
+  id           Int      @id @default(autoincrement())
+  username     String   @unique
+  passwordHash String   @map("password_hash")
+  role         String   // admin, operator, driver, coach, marketer
+  realName     String?  @map("real_name")
+  phone        String?
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("users")
+}
+
+// ==================== 客户管理 ====================
+
+model Customer {
+  id             Int       @id @default(autoincrement())
+  name           String
+  phone          String    @unique
+  wechat         String?
+  source         String    // xiaohongshu, wechat, other
+  tags           String?   // JSON array
+  notes          String?
+  firstVisitDate DateTime? @map("first_visit_date")
+  lastVisitDate  DateTime? @map("last_visit_date")
+  totalSpent     Decimal   @default(0) @map("total_spent")
+  visitCount     Int       @default(0) @map("visit_count")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  orders Order[]
+
+  @@index([name])
+  @@index([source])
+  @@index([lastVisitDate])
+  @@index([createdAt])
+  @@map("customers")
+}
+
+// ==================== 住宿管理 ====================
+
+model AccommodationPlace {
+  id        Int      @id @default(autoincrement())
+  name      String
+  type      String   // self, external
+  address   String?
+  phone     String?
+  distance  Decimal?
+  duration  Int?     // 分钟
+  notes     String?
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  orders       Order[]
+  shuttleStops ShuttleStop[]
+
+  @@index([type])
+  @@map("accommodation_places")
+}
+
+// ==================== 项目管理 ====================
+
+model Project {
+  id          Int       @id @default(autoincrement())
+  name        String
+  description String?
+  price       Decimal
+  unit        String    // per_person, per_group
+  season      String?   // winter, summer, all
+  duration    Int       // 分钟
+  capacity    Int?      // 场地容量
+  isActive    Boolean   @default(true) @map("is_active")
+  sortOrder   Int       @default(0) @map("sort_order")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  orderItems     OrderItem[]
+  packageItems   PackageItem[]
+  dailySchedules DailySchedule[]
+
+  @@index([season])
+  @@index([isActive])
+  @@map("projects")
+}
+
+// ==================== 套餐管理 ====================
+
+model Package {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  price       Decimal
+  minPeople   Int?     @map("min_people")
+  isActive    Boolean  @default(true) @map("is_active")
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  packageItems PackageItem[]
+  orders       Order[]
+
+  @@map("packages")
+}
+
+model PackageItem {
+  id        Int      @id @default(autoincrement())
+  packageId Int      @map("package_id")
+  projectId Int      @map("project_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  package Package @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id])
+
+  @@index([packageId])
+  @@index([projectId])
+  @@map("package_items")
+}
+
+// ==================== 订单管理 ====================
+
+model Order {
+  id                   Int       @id @default(autoincrement())
+  orderNumber          String    @unique @map("order_number")
+  customerId           Int       @map("customer_id")
+  accommodationPlaceId Int       @map("accommodation_place_id")
+  roomNumber           String?   @map("room_number")
+  packageId            Int?      @map("package_id")
+  orderDate            DateTime  @map("order_date")
+  visitDate            DateTime  @map("visit_date")
+  peopleCount          Int       @map("people_count")
+  totalAmount          Decimal   @map("total_amount")
+  status               String    // pending, confirmed, completed, cancelled
+  paymentStatus        String    @map("payment_status") // unpaid, paid, refunded
+  notes                String?
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+
+  customer           Customer           @relation(fields: [customerId], references: [id])
+  accommodationPlace AccommodationPlace @relation(fields: [accommodationPlaceId], references: [id])
+  package            Package?           @relation(fields: [packageId], references: [id])
+  orderItems         OrderItem[]
+
+  @@index([customerId])
+  @@index([accommodationPlaceId])
+  @@index([packageId])
+  @@index([orderDate])
+  @@index([visitDate])
+  @@index([status])
+  @@index([paymentStatus])
+  @@index([createdAt])
+  @@map("orders")
+}
+
+model OrderItem {
+  id                 Int       @id @default(autoincrement())
+  orderId            Int       @map("order_id")
+  projectId          Int       @map("project_id")
+  quantity           Int
+  unitPrice          Decimal   @map("unit_price")
+  subtotal           Decimal
+  scheduledTimeStart DateTime? @map("scheduled_time_start")
+  scheduledTimeEnd   DateTime? @map("scheduled_time_end")
+  coachId            Int?      @map("coach_id")
+  createdAt          DateTime  @default(now()) @map("created_at")
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id])
+  coach   Coach?  @relation(fields: [coachId], references: [id])
+
+  @@index([orderId])
+  @@index([projectId])
+  @@index([coachId])
+  @@map("order_items")
+}
+
+// ==================== 接送调度 ====================
+
+model Vehicle {
+  id          Int      @id @default(autoincrement())
+  plateNumber String   @unique @map("plate_number")
+  vehicleType String   @map("vehicle_type") // 大巴, 中巴, 商务车
+  seats       Int
+  status      String   // available, maintenance, assigned
+  notes       String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  shuttleSchedules ShuttleSchedule[]
+
+  @@map("vehicles")
+}
+
+model Driver {
+  id        Int      @id @default(autoincrement())
+  userId    Int?     @map("user_id")
+  name      String
+  phone     String
+  status    String   // on_duty, off_duty
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  shuttleSchedules ShuttleSchedule[]
+
+  @@map("drivers")
+}
+
+model ShuttleSchedule {
+  id            Int       @id @default(autoincrement())
+  date          DateTime
+  batchName     String    @map("batch_name")
+  vehicleId     Int       @map("vehicle_id")
+  driverId      Int       @map("driver_id")
+  departureTime DateTime  @map("departure_time")
+  returnTime    DateTime? @map("return_time")
+  status        String    // pending, in_progress, completed
+  notes         String?
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  vehicle      Vehicle       @relation(fields: [vehicleId], references: [id])
+  driver       Driver        @relation(fields: [driverId], references: [id])
+  shuttleStops ShuttleStop[]
+
+  @@index([date])
+  @@index([vehicleId])
+  @@index([driverId])
+  @@map("shuttle_schedules")
+}
+
+model ShuttleStop {
+  id                   Int      @id @default(autoincrement())
+  scheduleId           Int      @map("schedule_id")
+  accommodationPlaceId Int      @map("accommodation_place_id")
+  stopOrder            Int      @map("stop_order")
+  passengerCount       Int      @map("passenger_count")
+  createdAt            DateTime @default(now()) @map("created_at")
+
+  schedule           ShuttleSchedule    @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  accommodationPlace AccommodationPlace @relation(fields: [accommodationPlaceId], references: [id])
+
+  @@index([scheduleId])
+  @@index([accommodationPlaceId])
+  @@map("shuttle_stops")
+}
+
+// ==================== 行程排期 ====================
+
+model Coach {
+  id          Int      @id @default(autoincrement())
+  userId      Int?     @map("user_id")
+  name        String
+  phone       String
+  specialties String?  // JSON array
+  status      String   // on_duty, off_duty
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  orderItems     OrderItem[]
+  dailySchedules DailySchedule[]
+
+  @@map("coaches")
+}
+
+model DailySchedule {
+  id               Int       @id @default(autoincrement())
+  date             DateTime
+  orderItemId      Int       @map("order_item_id")
+  projectId        Int       @map("project_id")
+  startTime        DateTime  @map("start_time")
+  endTime          DateTime  @map("end_time")
+  coachId          Int?      @map("coach_id")
+  participantCount Int       @map("participant_count")
+  status           String    // scheduled, in_progress, completed
+  notes            String?
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  project Project @relation(fields: [projectId], references: [id])
+  coach   Coach?  @relation(fields: [coachId], references: [id])
+
+  @@index([date])
+  @@index([projectId])
+  @@index([coachId])
+  @@map("daily_schedules")
+}
+
+// ==================== 内容管理 ====================
+
+model XiaohongshuNote {
+  id             Int       @id @default(autoincrement())
+  title          String
+  content        String
+  status         String    // draft, published, deleted
+  publishDate    DateTime? @map("publish_date")
+  views          Int       @default(0)
+  likes          Int       @default(0)
+  comments       Int       @default(0)
+  collects       Int       @default(0)
+  tags           String?   // JSON array
+  images         String?   // JSON array
+  xiaohongshuUrl String?   @map("xiaohongshu_url")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([publishDate])
+  @@index([createdAt])
+  @@map("xiaohongshu_notes")
+}
