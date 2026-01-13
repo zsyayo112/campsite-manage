@@ -29,6 +29,9 @@ const ScheduleTimeline = lazy(() => import('./pages/schedules/ScheduleTimeline')
 const ProjectList = lazy(() => import('./pages/projects/ProjectList'));
 const PackageList = lazy(() => import('./pages/packages/PackageList'));
 const UserList = lazy(() => import('./pages/users/UserList'));
+const BookingList = lazy(() => import('./pages/booking/BookingList'));
+const PublicBookingForm = lazy(() => import('./pages/booking/PublicBookingForm'));
+const BookingSuccess = lazy(() => import('./pages/booking/BookingSuccess'));
 
 // 带 Layout 的私有路由组件
 const PrivateLayoutRoute = ({ children }) => (
@@ -45,7 +48,9 @@ function App() {
       <Router>
         <Suspense fallback={<PageLoading />}>
           <Routes>
-            {/* 公开路由 */}
+            {/* 公开路由 - 客户预约表单（无需登录）*/}
+            <Route path="/book" element={<PublicBookingForm />} />
+            <Route path="/booking/success" element={<BookingSuccess />} />
             <Route path="/login" element={<Login />} />
 
             {/* 需要认证的路由 */}
@@ -174,6 +179,14 @@ function App() {
               element={
                 <PrivateLayoutRoute>
                   <UserList />
+                </PrivateLayoutRoute>
+              }
+            />
+            <Route
+              path="/bookings"
+              element={
+                <PrivateLayoutRoute>
+                  <BookingList />
                 </PrivateLayoutRoute>
               }
             />

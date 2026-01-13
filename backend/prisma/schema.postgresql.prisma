@@ -32,7 +32,7 @@ model Customer {
   name           String
   phone          String    @unique
   wechat         String?
-  source         String    // xiaohongshu, wechat, other
+  source         String    // xiaohongshu, wechat, booking_form, other
   tags           String?   // JSON array
   notes          String?
   firstVisitDate DateTime? @map("first_visit_date")
@@ -42,7 +42,8 @@ model Customer {
   createdAt      DateTime  @default(now()) @map("created_at")
   updatedAt      DateTime  @updatedAt @map("updated_at")
 
-  orders Order[]
+  orders   Order[]
+  bookings Booking[]
 
   @@index([name])
   @@index([source])
@@ -101,18 +102,22 @@ model Project {
 // ==================== 套餐管理 ====================
 
 model Package {
-  id          Int      @id @default(autoincrement())
-  name        String
-  description String?
-  price       Decimal
-  minPeople   Int?     @map("min_people")
-  isActive    Boolean  @default(true) @map("is_active")
-  sortOrder   Int      @default(0) @map("sort_order")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id                Int      @id @default(autoincrement())
+  name              String
+  description       String?
+  price             Decimal
+  childPrice        Decimal? @map("child_price")        // 儿童价格（4岁以下）
+  minPeople         Int?     @map("min_people")
+  isActive          Boolean  @default(true) @map("is_active")
+  showInBookingForm Boolean  @default(true) @map("show_in_booking_form") // 是否在预约表单显示
+  specialPricing    String?  @map("special_pricing")    // 特殊日期价格配置 JSON
+  sortOrder         Int      @default(0) @map("sort_order")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
 
   packageItems PackageItem[]
   orders       Order[]
+  bookings     Booking[]
 
   @@map("packages")
 }
@@ -140,6 +145,7 @@ model Order {
   accommodationPlaceId Int       @map("accommodation_place_id")
   roomNumber           String?   @map("room_number")
   packageId            Int?      @map("package_id")
+  bookingId            Int?      @unique @map("booking_id") // 预约来源
   orderDate            DateTime  @map("order_date")
   visitDate            DateTime  @map("visit_date")
   peopleCount          Int       @map("people_count")
@@ -153,6 +159,7 @@ model Order {
   customer           Customer           @relation(fields: [customerId], references: [id])
   accommodationPlace AccommodationPlace @relation(fields: [accommodationPlaceId], references: [id])
   package            Package?           @relation(fields: [packageId], references: [id])
+  booking            Booking?           @relation(fields: [bookingId], references: [id])
   orderItems         OrderItem[]
 
   @@index([customerId])
@@ -321,4 +328,68 @@ model XiaohongshuNote {
   @@index([publishDate])
   @@index([createdAt])
   @@map("xiaohongshu_notes")
+}
+
+// ==================== 客户自助预约 ====================
+
+model Booking {
+  id               Int       @id @default(autoincrement())
+  bookingCode      String    @unique @map("booking_code") // BK20260129001
+
+  // 客户信息（提交时记录）
+  customerName     String    @map("customer_name")
+  customerPhone    String    @map("customer_phone")
+  customerWechat   String?   @map("customer_wechat")
+
+  // 关联客户（处理后关联）
+  customerId       Int?      @map("customer_id")
+
+  // 预约详情
+  visitDate        DateTime  @map("visit_date")
+  peopleCount      Int       @map("people_count")
+  childCount       Int       @default(0) @map("child_count")
+
+  // 住宿信息
+  hotelName        String    @map("hotel_name")
+  hotelId          Int?      @map("hotel_id")
+  roomNumber       String?   @map("room_number")
+
+  // 套餐信息
+  packageId        Int?      @map("package_id")
+  packageName      String?   @map("package_name")
+
+  // 价格信息
+  unitPrice        Decimal   @map("unit_price")
+  childPrice       Decimal   @default(0) @map("child_price")
+  totalAmount      Decimal   @map("total_amount")
+
+  // 定金信息
+  depositAmount    Decimal   @default(0) @map("deposit_amount")
+  depositPaidAt    DateTime? @map("deposit_paid_at")
+  depositCollector String?   @map("deposit_collector")
+
+  // 状态: pending, confirmed, converted, completed, cancelled
+  status           String    @default("pending")
+
+  // 备注
+  customerNotes    String?   @map("customer_notes")
+  operatorNotes    String?   @map("operator_notes")
+
+  // 来源追踪
+  source           String    @default("wechat_form") // wechat_form, manual, other
+
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  // 关联
+  customer         Customer? @relation(fields: [customerId], references: [id])
+  package          Package?  @relation(fields: [packageId], references: [id])
+  order            Order?
+
+  @@index([bookingCode])
+  @@index([customerPhone])
+  @@index([visitDate])
+  @@index([status])
+  @@index([createdAt])
+  @@map("bookings")
 }

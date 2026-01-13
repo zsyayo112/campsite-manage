@@ -66,13 +66,21 @@ async function main() {
 
   // 4. 创建套餐
   console.log('\n4. 创建套餐...');
+  // 春节特殊价格配置
+  const springFestivalPricing = JSON.stringify({
+    dates: ['2025-01-28', '2025-01-29', '2025-01-30', '2025-01-31', '2025-02-01', '2025-02-02', '2025-02-03', '2025-02-04'],
+    price: 398,
+    childPrice: 268,
+    label: '春节价'
+  });
+
   const packageData = [
-    { name: '单项体验', description: '任选1个项目', price: 98, minPeople: 1, sortOrder: 1 },
-    { name: '双项套餐', description: '任选2个项目', price: 168, minPeople: 1, sortOrder: 2 },
-    { name: '冰雪乐园套餐', description: '冰钓+雪上滑梯+烤棉花糖', price: 228, minPeople: 1, sortOrder: 3 },
-    { name: '美食体验套餐', description: '石板烧烤+烤地瓜+烤棉花糖', price: 198, minPeople: 1, sortOrder: 4 },
-    { name: '全景套餐', description: '全部6个项目', price: 358, minPeople: 1, sortOrder: 5 },
-    { name: '团队定制', description: '根据需求定制', price: 0, minPeople: 10, sortOrder: 6 },
+    { name: '单项体验', description: '任选1个项目', price: 98, childPrice: 68, minPeople: 1, sortOrder: 1, showInBookingForm: true },
+    { name: '双项套餐', description: '任选2个项目', price: 168, childPrice: 118, minPeople: 1, sortOrder: 2, showInBookingForm: true },
+    { name: '冰雪乐园套餐', description: '冰钓+雪上滑梯+烤棉花糖', price: 228, childPrice: 158, minPeople: 1, sortOrder: 3, showInBookingForm: true, specialPricing: springFestivalPricing },
+    { name: '美食体验套餐', description: '石板烧烤+烤地瓜+烤棉花糖', price: 198, childPrice: 138, minPeople: 1, sortOrder: 4, showInBookingForm: true },
+    { name: '全景套餐', description: '全部6个项目', price: 358, childPrice: 248, minPeople: 1, sortOrder: 5, showInBookingForm: true, specialPricing: springFestivalPricing },
+    { name: '团队定制', description: '根据需求定制', price: 0, childPrice: 0, minPeople: 10, sortOrder: 6, showInBookingForm: false },
   ];
 
   const packages = [];
