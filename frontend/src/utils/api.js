@@ -2,6 +2,18 @@ import axios from 'axios';
 import useAuthStore from '../store/authStore';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const SERVER_BASE_URL = process.env.REACT_APP_SERVER_URL || 'http://localhost:5000';
+
+// 获取完整的静态文件URL（用于图片、视频等）
+export const getFileUrl = (path) => {
+  if (!path) return '';
+  // 如果已经是完整 URL，直接返回
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    return path;
+  }
+  // 否则拼接服务器地址
+  return `${SERVER_BASE_URL}${path}`;
+};
 
 const api = axios.create({
   baseURL: API_BASE_URL,

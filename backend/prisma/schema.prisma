@@ -78,18 +78,29 @@ model AccommodationPlace {
 // ==================== 项目管理 ====================
 
 model Project {
-  id          Int       @id @default(autoincrement())
-  name        String
-  description String?
-  price       Decimal
-  unit        String    // per_person, per_group
-  season      String?   // winter, summer, all
-  duration    Int       // 分钟
-  capacity    Int?      // 场地容量
-  isActive    Boolean   @default(true) @map("is_active")
-  sortOrder   Int       @default(0) @map("sort_order")
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
+  id              Int       @id @default(autoincrement())
+  name            String
+  description     String?
+  price           Decimal
+  unit            String    // per_person, per_group
+  season          String?   // winter, summer, all
+  duration        Int       // 分钟
+  capacity        Int?      // 场地容量
+  isActive        Boolean   @default(true) @map("is_active")
+  sortOrder       Int       @default(0) @map("sort_order")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  // V2.2/V2.3 新增：活动介绍扩展字段
+  coverImage      String?   @map("cover_image")       // 封面图URL
+  images          String?   @map("images")            // 图片列表(JSON)
+  videos          String?   @map("videos")            // V2.3: 视频列表(JSON)
+  highlights      String?   @map("highlights")        // 亮点(JSON数组)
+  precautions     String?   @map("precautions")       // 注意事项(JSON数组)
+  longDescription String?   @map("long_description")  // 详细介绍
+  showInPublic    Boolean   @default(true) @map("show_in_public") // 是否公开展示
+  displayOrder    Int       @default(0) @map("display_order")     // V2.3: 展示顺序
+  badge           String?   @map("badge")             // V2.3: 标签(热门/推荐/新品)
 
   orderItems     OrderItem[]
   packageItems   PackageItem[]
@@ -105,14 +116,48 @@ model Project {
 model Package {
   id                Int      @id @default(autoincrement())
   name              String
+  subtitle          String?  @map("subtitle")                           // V2.3: 副标题
   description       String?
+  longDescription   String?  @map("long_description")                   // V2.3: 详细介绍
+
+  // 价格配置
   price             Decimal
-  childPrice        Decimal? @map("child_price")        // 儿童价格（4岁以下）
-  minPeople         Int?     @map("min_people")
-  isActive          Boolean  @default(true) @map("is_active")
+  childPrice        Decimal? @map("child_price")                        // 儿童价格（4岁以下）
+  originalPrice     Decimal? @map("original_price")                     // V2.3: 原价（划线价）
+  specialPricing    String?  @map("special_pricing")                    // 特殊日期价格配置 JSON
+
+  // V2.3: 多媒体内容
+  coverImage        String?  @map("cover_image")                        // 封面图URL
+  images            String?  @map("images")                             // 图片列表(JSON数组)
+  videos            String?  @map("videos")                             // 视频列表(JSON数组)
+
+  // V2.3: 套餐内容
+  includedItems     String?  @map("included_items")                     // 包含项目文字描述(JSON数组)
+  highlights        String?  @map("highlights")                         // 套餐亮点(JSON数组)
+  schedule          String?  @map("schedule")                           // 行程安排(JSON数组)
+  precautions       String?  @map("precautions")                        // 注意事项(JSON数组)
+
+  // 展示配置
+  showInPublic      Boolean  @default(true) @map("show_in_public")      // V2.3: 是否公开展示
   showInBookingForm Boolean  @default(true) @map("show_in_booking_form") // 是否在预约表单显示
-  specialPricing    String?  @map("special_pricing")    // 特殊日期价格配置 JSON
-  sortOrder         Int      @default(0) @map("sort_order")
+  displayOrder      Int      @default(0) @map("display_order")          // V2.3: 展示顺序（替代sortOrder）
+  badge             String?  @map("badge")                              // V2.3: 标签(推荐/热门/新品)
+
+  // 时间和容量
+  duration          Int?     @map("duration")                           // V2.3: 活动时长(分钟)
+  minPeople         Int?     @map("min_people")
+  maxPeople         Int?     @map("max_people")                         // V2.3: 最多人数
+
+  // 状态
+  isActive          Boolean  @default(true) @map("is_active")
+  status            String   @default("active")                         // V2.3: active/inactive/draft
+
+  // 关联项目ID
+  projectIds        String?  @map("project_ids")                        // V2.3: 包含的项目ID(JSON数组)
+
+  // 兼容旧字段
+  sortOrder         Int      @default(0) @map("sort_order")             // 已废弃，使用displayOrder
+
   createdAt         DateTime @default(now()) @map("created_at")
   updatedAt         DateTime @updatedAt @map("updated_at")
 
@@ -120,6 +165,8 @@ model Package {
   orders       Order[]
   bookings     Booking[]
 
+  @@index([status, showInPublic])
+  @@index([displayOrder])
   @@map("packages")
 }
 
@@ -347,13 +394,15 @@ model Booking {
 
   // 预约详情
   visitDate        DateTime  @map("visit_date")
-  peopleCount      Int       @map("people_count")
-  childCount       Int       @default(0) @map("child_count")
+  adultCount       Int       @default(1) @map("adult_count")   // V2.2: 成人人数（独立字段）
+  childCount       Int       @default(0) @map("child_count")   // 儿童人数（4岁以下）
+  peopleCount      Int       @map("people_count")              // 总人数（兼容旧数据）
 
   // 住宿信息
-  hotelName        String    @map("hotel_name")
+  hotelName        String?   @map("hotel_name")                // V2.2: 改为可选
   hotelId          Int?      @map("hotel_id")
   roomNumber       String?   @map("room_number")
+  accommodationNotes String? @map("accommodation_notes")       // V2.2: 住宿备注（替代酒店选择）
 
   // 套餐信息
   packageId        Int?      @map("package_id")
@@ -393,4 +442,19 @@ model Booking {
   @@index([status])
   @@index([createdAt])
   @@map("bookings")
+}
+
+// ==================== 站点配置 V2.2 ====================
+
+model SiteConfig {
+  id        Int      @id @default(autoincrement())
+  key       String   @unique                      // 配置键名
+  value     String                                // 配置值（JSON）
+  label     String?                               // 显示名称
+  group     String   @default("general")          // 分组：general, contact, about, seo
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([group])
+  @@map("site_configs")
 }

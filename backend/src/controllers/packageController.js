@@ -8,7 +8,7 @@ const { Prisma } = require('@prisma/client');
  */
 const getPackages = async (req, res) => {
   try {
-    const { page = 1, pageSize = 20, isActive, includeItems = 'true' } = req.query;
+    const { page = 1, pageSize = 20, isActive, status, showInPublic, includeItems = 'true' } = req.query;
 
     const skip = (parseInt(page) - 1) * parseInt(pageSize);
     const take = parseInt(pageSize);
@@ -16,6 +16,14 @@ const getPackages = async (req, res) => {
     const where = {};
     if (isActive !== undefined) {
       where.isActive = isActive === 'true';
+    }
+    // V2.3: 支持按状态筛选
+    if (status) {
+      where.status = status;
+    }
+    // V2.3: 支持按公开展示筛选
+    if (showInPublic !== undefined) {
+      where.showInPublic = showInPublic === 'true';
     }
 
     const include = {};
@@ -42,7 +50,7 @@ const getPackages = async (req, res) => {
         where,
         skip,
         take,
-        orderBy: { sortOrder: 'asc' },
+        orderBy: [{ displayOrder: 'asc' }, { sortOrder: 'asc' }], // V2.3: 优先使用displayOrder
         include,
       }),
       prisma.package.count({ where }),
@@ -177,12 +185,31 @@ const createPackage = async (req, res) => {
   try {
     const {
       name,
+      subtitle,           // V2.3
       description,
+      longDescription,    // V2.3
       price,
+      childPrice,
+      originalPrice,      // V2.3
+      specialPricing,
+      coverImage,         // V2.3
+      images,             // V2.3
+      videos,             // V2.3
+      includedItems,      // V2.3
+      highlights,         // V2.3
+      schedule,           // V2.3
+      precautions,        // V2.3
+      showInPublic = true,    // V2.3
+      showInBookingForm = true,
+      displayOrder = 0,   // V2.3
+      badge,              // V2.3
+      duration,           // V2.3
       minPeople,
+      maxPeople,          // V2.3
+      status = 'active',  // V2.3
+      projectIds,         // V2.3: 关联项目ID数组（JSON字符串存储）
       isActive = true,
       sortOrder = 0,
-      projectIds, // 项目ID数组
     } = req.body;
 
     // 验证必填字段
@@ -197,19 +224,23 @@ const createPackage = async (req, res) => {
     }
 
     // 验证项目存在（如果提供了项目列表）
-    if (projectIds && projectIds.length > 0) {
-      const projects = await prisma.project.findMany({
-        where: { id: { in: projectIds } },
-      });
-
-      if (projects.length !== projectIds.length) {
-        return res.status(400).json({
-          success: false,
-          error: {
-            code: 'INVALID_PROJECTS',
-            message: '部分项目ID无效',
-          },
+    let parsedProjectIds = [];
+    if (projectIds) {
+      parsedProjectIds = typeof projectIds === 'string' ? JSON.parse(projectIds) : projectIds;
+      if (parsedProjectIds.length > 0) {
+        const projects = await prisma.project.findMany({
+          where: { id: { in: parsedProjectIds } },
         });
+
+        if (projects.length !== parsedProjectIds.length) {
+          return res.status(400).json({
+            success: false,
+            error: {
+              code: 'INVALID_PROJECTS',
+              message: '部分项目ID无效',
+            },
+          });
+        }
       }
     }
 
@@ -217,14 +248,34 @@ const createPackage = async (req, res) => {
     const pkg = await prisma.package.create({
       data: {
         name,
+        subtitle,
         description,
+        longDescription,
         price: new Prisma.Decimal(price),
+        childPrice: childPrice ? new Prisma.Decimal(childPrice) : null,
+        originalPrice: originalPrice ? new Prisma.Decimal(originalPrice) : null,
+        specialPricing: typeof specialPricing === 'string' ? specialPricing : JSON.stringify(specialPricing || null),
+        coverImage,
+        images: typeof images === 'string' ? images : JSON.stringify(images || []),
+        videos: typeof videos === 'string' ? videos : JSON.stringify(videos || []),
+        includedItems: typeof includedItems === 'string' ? includedItems : JSON.stringify(includedItems || []),
+        highlights: typeof highlights === 'string' ? highlights : JSON.stringify(highlights || []),
+        schedule: typeof schedule === 'string' ? schedule : JSON.stringify(schedule || []),
+        precautions: typeof precautions === 'string' ? precautions : JSON.stringify(precautions || []),
+        showInPublic,
+        showInBookingForm,
+        displayOrder,
+        badge,
+        duration: duration || null,
         minPeople: minPeople || null,
+        maxPeople: maxPeople || null,
+        status,
+        projectIds: typeof projectIds === 'string' ? projectIds : JSON.stringify(parsedProjectIds),
         isActive,
         sortOrder,
-        packageItems: projectIds && projectIds.length > 0
+        packageItems: parsedProjectIds.length > 0
           ? {
-              create: projectIds.map((projectId) => ({
+              create: parsedProjectIds.map((projectId) => ({
                 projectId,
               })),
             }
@@ -272,12 +323,31 @@ const updatePackage = async (req, res) => {
     const { id } = req.params;
     const {
       name,
+      subtitle,           // V2.3
       description,
+      longDescription,    // V2.3
       price,
+      childPrice,
+      originalPrice,      // V2.3
+      specialPricing,
+      coverImage,         // V2.3
+      images,             // V2.3
+      videos,             // V2.3
+      includedItems,      // V2.3
+      highlights,         // V2.3
+      schedule,           // V2.3
+      precautions,        // V2.3
+      showInPublic,       // V2.3
+      showInBookingForm,
+      displayOrder,       // V2.3
+      badge,              // V2.3
+      duration,           // V2.3
       minPeople,
+      maxPeople,          // V2.3
+      status,             // V2.3
+      projectIds,
       isActive,
       sortOrder,
-      projectIds, // 更新后的项目ID数组
     } = req.body;
 
     // 检查套餐是否存在
@@ -296,50 +366,74 @@ const updatePackage = async (req, res) => {
     }
 
     // 验证项目存在（如果提供了项目列表）
-    if (projectIds && projectIds.length > 0) {
-      const projects = await prisma.project.findMany({
-        where: { id: { in: projectIds } },
-      });
-
-      if (projects.length !== projectIds.length) {
-        return res.status(400).json({
-          success: false,
-          error: {
-            code: 'INVALID_PROJECTS',
-            message: '部分项目ID无效',
-          },
+    let parsedProjectIds = null;
+    if (projectIds !== undefined) {
+      parsedProjectIds = typeof projectIds === 'string' ? JSON.parse(projectIds) : projectIds;
+      if (parsedProjectIds && parsedProjectIds.length > 0) {
+        const projects = await prisma.project.findMany({
+          where: { id: { in: parsedProjectIds } },
         });
+
+        if (projects.length !== parsedProjectIds.length) {
+          return res.status(400).json({
+            success: false,
+            error: {
+              code: 'INVALID_PROJECTS',
+              message: '部分项目ID无效',
+            },
+          });
+        }
       }
     }
 
     // 构建更新数据
     const updateData = {};
     if (name !== undefined) updateData.name = name;
+    if (subtitle !== undefined) updateData.subtitle = subtitle;
     if (description !== undefined) updateData.description = description;
+    if (longDescription !== undefined) updateData.longDescription = longDescription;
     if (price !== undefined) updateData.price = new Prisma.Decimal(price);
+    if (childPrice !== undefined) updateData.childPrice = childPrice ? new Prisma.Decimal(childPrice) : null;
+    if (originalPrice !== undefined) updateData.originalPrice = originalPrice ? new Prisma.Decimal(originalPrice) : null;
+    if (specialPricing !== undefined) updateData.specialPricing = typeof specialPricing === 'string' ? specialPricing : JSON.stringify(specialPricing);
+    if (coverImage !== undefined) updateData.coverImage = coverImage;
+    if (images !== undefined) updateData.images = typeof images === 'string' ? images : JSON.stringify(images);
+    if (videos !== undefined) updateData.videos = typeof videos === 'string' ? videos : JSON.stringify(videos);
+    if (includedItems !== undefined) updateData.includedItems = typeof includedItems === 'string' ? includedItems : JSON.stringify(includedItems);
+    if (highlights !== undefined) updateData.highlights = typeof highlights === 'string' ? highlights : JSON.stringify(highlights);
+    if (schedule !== undefined) updateData.schedule = typeof schedule === 'string' ? schedule : JSON.stringify(schedule);
+    if (precautions !== undefined) updateData.precautions = typeof precautions === 'string' ? precautions : JSON.stringify(precautions);
+    if (showInPublic !== undefined) updateData.showInPublic = showInPublic;
+    if (showInBookingForm !== undefined) updateData.showInBookingForm = showInBookingForm;
+    if (displayOrder !== undefined) updateData.displayOrder = displayOrder;
+    if (badge !== undefined) updateData.badge = badge;
+    if (duration !== undefined) updateData.duration = duration;
     if (minPeople !== undefined) updateData.minPeople = minPeople;
+    if (maxPeople !== undefined) updateData.maxPeople = maxPeople;
+    if (status !== undefined) updateData.status = status;
+    if (projectIds !== undefined) updateData.projectIds = typeof projectIds === 'string' ? projectIds : JSON.stringify(parsedProjectIds);
     if (isActive !== undefined) updateData.isActive = isActive;
     if (sortOrder !== undefined) updateData.sortOrder = sortOrder;
 
     // 使用事务更新套餐和项目关联
     const pkg = await prisma.$transaction(async (tx) => {
       // 更新套餐基本信息
-      const updated = await tx.package.update({
+      await tx.package.update({
         where: { id: parseInt(id) },
         data: updateData,
       });
 
       // 如果提供了项目列表，更新关联关系
-      if (projectIds !== undefined) {
+      if (parsedProjectIds !== null) {
         // 删除旧的关联
         await tx.packageItem.deleteMany({
           where: { packageId: parseInt(id) },
         });
 
         // 创建新的关联
-        if (projectIds.length > 0) {
+        if (parsedProjectIds.length > 0) {
           await tx.packageItem.createMany({
-            data: projectIds.map((projectId) => ({
+            data: parsedProjectIds.map((projectId) => ({
               packageId: parseInt(id),
               projectId,
             })),
@@ -827,6 +921,195 @@ const calculatePrice = async (req, res) => {
   }
 };
 
+/**
+ * V2.3: 更新套餐排序
+ * @route   PUT /api/packages/reorder
+ * @desc    批量更新套餐展示顺序
+ * @access  Private (admin)
+ */
+const reorderPackages = async (req, res) => {
+  try {
+    const { orders } = req.body;
+
+    if (!orders || !Array.isArray(orders)) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: '请提供有效的排序数据 (orders)',
+        },
+      });
+    }
+
+    // 批量更新排序
+    await prisma.$transaction(
+      orders.map(({ id, displayOrder }) =>
+        prisma.package.update({
+          where: { id },
+          data: { displayOrder },
+        })
+      )
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: '套餐排序更新成功',
+    });
+  } catch (error) {
+    console.error('更新套餐排序失败:', error);
+    return res.status(500).json({
+      success: false,
+      error: {
+        code: 'REORDER_PACKAGES_ERROR',
+        message: '更新套餐排序失败',
+      },
+    });
+  }
+};
+
+/**
+ * V2.3: 获取公开套餐列表
+ * @route   GET /api/public/packages
+ * @desc    获取公开展示的套餐列表
+ * @access  Public
+ */
+const getPublicPackages = async (req, res) => {
+  try {
+    const packages = await prisma.package.findMany({
+      where: {
+        showInPublic: true,
+        status: 'active',
+        isActive: true,
+      },
+      orderBy: { displayOrder: 'asc' },
+      select: {
+        id: true,
+        name: true,
+        subtitle: true,
+        description: true,
+        price: true,
+        childPrice: true,
+        originalPrice: true,
+        specialPricing: true,
+        coverImage: true,
+        includedItems: true,
+        highlights: true,
+        badge: true,
+        duration: true,
+        minPeople: true,
+        maxPeople: true,
+        packageItems: {
+          include: {
+            project: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // 解析JSON字段
+    const parsedPackages = packages.map((pkg) => ({
+      ...pkg,
+      specialPricing: pkg.specialPricing ? JSON.parse(pkg.specialPricing) : null,
+      includedItems: pkg.includedItems ? JSON.parse(pkg.includedItems) : [],
+      highlights: pkg.highlights ? JSON.parse(pkg.highlights) : [],
+      projects: pkg.packageItems.map((item) => item.project),
+    }));
+
+    return res.status(200).json({
+      success: true,
+      data: parsedPackages,
+    });
+  } catch (error) {
+    console.error('获取公开套餐列表失败:', error);
+    return res.status(500).json({
+      success: false,
+      error: {
+        code: 'GET_PUBLIC_PACKAGES_ERROR',
+        message: '获取套餐列表失败',
+      },
+    });
+  }
+};
+
+/**
+ * V2.3: 获取公开套餐详情
+ * @route   GET /api/public/packages/:id
+ * @desc    获取套餐详情（公开）
+ * @access  Public
+ */
+const getPublicPackageDetail = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const pkg = await prisma.package.findFirst({
+      where: {
+        id: parseInt(id),
+        showInPublic: true,
+        status: 'active',
+        isActive: true,
+      },
+      include: {
+        packageItems: {
+          include: {
+            project: {
+              select: {
+                id: true,
+                name: true,
+                description: true,
+                price: true,
+                duration: true,
+                coverImage: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!pkg) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          code: 'PACKAGE_NOT_FOUND',
+          message: '套餐不存在或未公开',
+        },
+      });
+    }
+
+    // 解析JSON字段
+    const parsedPackage = {
+      ...pkg,
+      specialPricing: pkg.specialPricing ? JSON.parse(pkg.specialPricing) : null,
+      images: pkg.images ? JSON.parse(pkg.images) : [],
+      videos: pkg.videos ? JSON.parse(pkg.videos) : [],
+      includedItems: pkg.includedItems ? JSON.parse(pkg.includedItems) : [],
+      highlights: pkg.highlights ? JSON.parse(pkg.highlights) : [],
+      schedule: pkg.schedule ? JSON.parse(pkg.schedule) : [],
+      precautions: pkg.precautions ? JSON.parse(pkg.precautions) : [],
+      projects: pkg.packageItems.map((item) => item.project),
+    };
+
+    return res.status(200).json({
+      success: true,
+      data: parsedPackage,
+    });
+  } catch (error) {
+    console.error('获取公开套餐详情失败:', error);
+    return res.status(500).json({
+      success: false,
+      error: {
+        code: 'GET_PUBLIC_PACKAGE_ERROR',
+        message: '获取套餐详情失败',
+      },
+    });
+  }
+};
+
 module.exports = {
   getPackages,
   getPackageById,
@@ -836,4 +1119,8 @@ module.exports = {
   addPackageItem,
   removePackageItem,
   calculatePrice,
+  // V2.3 新增
+  reorderPackages,
+  getPublicPackages,
+  getPublicPackageDetail,
 };

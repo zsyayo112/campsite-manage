@@ -93,3 +93,11 @@ tmpclaude*
 # Word temporary files
 ~$*.docx
 ~$*.doc
+
+# Uploaded files (keep directory structure)
+backend/uploads/images/*
+backend/uploads/videos/*
+backend/uploads/temp/*
+!backend/uploads/.gitkeep
+!backend/uploads/images/.gitkeep
+!backend/uploads/videos/.gitkeep

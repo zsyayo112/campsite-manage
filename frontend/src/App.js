@@ -32,6 +32,18 @@ const UserList = lazy(() => import('./pages/users/UserList'));
 const BookingList = lazy(() => import('./pages/booking/BookingList'));
 const PublicBookingForm = lazy(() => import('./pages/booking/PublicBookingForm'));
 const BookingSuccess = lazy(() => import('./pages/booking/BookingSuccess'));
+// V2.2 新增：订单自助查询
+const OrderQuery = lazy(() => import('./pages/booking/OrderQuery'));
+const PublicOrderDetail = lazy(() => import('./pages/booking/OrderDetail'));
+// V2.2 新增：营地活动介绍
+const ActivityList = lazy(() => import('./pages/public/ActivityList'));
+const ActivityDetail = lazy(() => import('./pages/public/ActivityDetail'));
+const AboutCamp = lazy(() => import('./pages/public/AboutCamp'));
+// V2.3 新增：公开套餐展示
+const PublicPackageList = lazy(() => import('./pages/public/PackageList'));
+const PublicPackageDetail = lazy(() => import('./pages/public/PackageDetail'));
+// V2.2 新增：后台设置
+const CampInfoSettings = lazy(() => import('./pages/settings/CampInfoSettings'));
 
 // 带 Layout 的私有路由组件
 const PrivateLayoutRoute = ({ children }) => (
@@ -51,6 +63,16 @@ function App() {
             {/* 公开路由 - 客户预约表单（无需登录）*/}
             <Route path="/book" element={<PublicBookingForm />} />
             <Route path="/booking/success" element={<BookingSuccess />} />
+            {/* V2.2 新增：订单自助查询 */}
+            <Route path="/my-orders" element={<OrderQuery />} />
+            <Route path="/my-orders/:type/:id" element={<PublicOrderDetail />} />
+            {/* V2.2 新增：营地活动介绍 */}
+            <Route path="/activities" element={<ActivityList />} />
+            <Route path="/activities/:id" element={<ActivityDetail />} />
+            <Route path="/about" element={<AboutCamp />} />
+            {/* V2.3 新增：公开套餐展示 */}
+            <Route path="/packages" element={<PublicPackageList />} />
+            <Route path="/packages/:id" element={<PublicPackageDetail />} />
             <Route path="/login" element={<Login />} />
 
             {/* 需要认证的路由 */}
@@ -167,7 +189,7 @@ function App() {
               }
             />
             <Route
-              path="/packages"
+              path="/admin/packages"
               element={
                 <PrivateLayoutRoute>
                   <PackageList />
@@ -187,6 +209,15 @@ function App() {
               element={
                 <PrivateLayoutRoute>
                   <BookingList />
+                </PrivateLayoutRoute>
+              }
+            />
+            {/* V2.2 新增：营地设置 */}
+            <Route
+              path="/settings/camp"
+              element={
+                <PrivateLayoutRoute>
+                  <CampInfoSettings />
                 </PrivateLayoutRoute>
               }
             />

@@ -13,6 +13,15 @@ const { authMiddleware, requireRole } = require('../middleware/auth');
 router.use(authMiddleware);
 
 /**
+ * V2.3 新增: 更新套餐排序
+ * @route   PUT /api/packages/reorder
+ * @desc    批量更新套餐展示顺序
+ * @access  Private (admin)
+ * @body    { orders: [{id: number, displayOrder: number}] }
+ */
+router.put('/reorder', requireRole(['admin']), packageController.reorderPackages);
+
+/**
  * @route   POST /api/packages/calculate-price
  * @desc    计算订单价格（预览）
  * @access  Private (admin, operator)

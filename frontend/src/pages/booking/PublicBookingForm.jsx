@@ -2,50 +2,53 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../utils/api';
 
+/**
+ * V2.2 公开预约表单
+ *
+ * 优化内容：
+ * 1. 调整字段顺序：姓名 → 手机号 → 微信号 → 人数 → 住宿备注 → 日期 → 套餐 → 备注
+ * 2. 修复人数选择器Bug：成人和儿童独立计数
+ * 3. 取消酒店选择，改为住宿备注文本输入
+ * 4. 定价：成人298元/人，儿童(4岁以下)238元/人
+ */
 const PublicBookingForm = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [packages, setPackages] = useState([]);
-  const [hotels, setHotels] = useState([]);
   const [error, setError] = useState('');
 
-  // 表单数据
+  // V2.2: 表单数据 - 使用独立的 adultCount 和 childCount
   const [formData, setFormData] = useState({
     customerName: '',
     customerPhone: '',
     customerWechat: '',
+    adultCount: 2,          // V2.2: 成人人数（独立状态）
+    childCount: 0,          // 儿童人数（独立状态）
+    accommodationNotes: '', // V2.2: 住宿备注（替代酒店选择）
     visitDate: '',
-    peopleCount: 2,
-    childCount: 0,
-    hotelName: '',
-    hotelId: null,
-    roomNumber: '',
     packageId: null,
     notes: '',
   });
 
   // 价格预览
   const [pricePreview, setPricePreview] = useState({
-    unitPrice: 0,
-    childPrice: 0,
-    adultCount: 0,
+    adultPrice: 298,
+    childPrice: 238,
+    adultCount: 2,
     childCount: 0,
-    totalAmount: 0,
+    totalAmount: 596,
   });
 
   // 特殊日期提示
   const [specialDateWarning, setSpecialDateWarning] = useState('');
 
-  // 加载套餐和酒店列表
+  // 加载套餐列表
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const [packagesRes, hotelsRes] = await Promise.all([
-          api.get('/public/packages'),
-          api.get('/public/hotels'),
-        ]);
+        const packagesRes = await api.get('/public/packages');
 
         if (packagesRes.data.success) {
           setPackages(packagesRes.data.data);
@@ -56,10 +59,6 @@ const PublicBookingForm = () => {
               packageId: packagesRes.data.data[0].id,
             }));
           }
-        }
-
-        if (hotelsRes.data.success) {
-          setHotels(hotelsRes.data.data);
         }
       } catch (err) {
         console.error('加载数据失败:', err);
@@ -72,46 +71,45 @@ const PublicBookingForm = () => {
     fetchData();
   }, []);
 
-  // 计算价格预览
+  // V2.2: 计算价格预览 - 使用独立的 adultCount 和 childCount
   useEffect(() => {
-    if (!formData.packageId || !formData.visitDate) {
-      setPricePreview({ unitPrice: 0, childPrice: 0, adultCount: 0, childCount: 0, totalAmount: 0 });
-      return;
-    }
-
     const pkg = packages.find((p) => p.id === formData.packageId);
-    if (!pkg) return;
 
-    let unitPrice = pkg.price;
-    let childPrice = pkg.childPrice || unitPrice * 0.8;
+    // 默认价格
+    let adultPrice = 298;
+    let childPrice = 238;
     let specialWarning = '';
 
-    // 检查特殊日期
-    if (pkg.specialPricing && formData.visitDate) {
-      const visitDateStr = formData.visitDate;
-      for (const [dateRange, pricing] of Object.entries(pkg.specialPricing)) {
-        const [start, end] = dateRange.split('~');
-        if (visitDateStr >= start && visitDateStr <= end) {
-          unitPrice = pricing.price;
-          childPrice = pricing.childPrice || unitPrice * 0.8;
-          specialWarning = pricing.label || '特殊日期价格';
-          break;
+    if (pkg) {
+      adultPrice = pkg.price || 298;
+      childPrice = pkg.childPrice || 238;
+
+      // 检查特殊日期
+      if (pkg.specialPricing && formData.visitDate) {
+        const visitDateStr = formData.visitDate;
+        for (const [dateRange, pricing] of Object.entries(pkg.specialPricing)) {
+          const [start, end] = dateRange.split('~');
+          if (visitDateStr >= start && visitDateStr <= end) {
+            adultPrice = pricing.price || adultPrice;
+            childPrice = pricing.childPrice || childPrice;
+            specialWarning = pricing.label || '特殊日期价格';
+            break;
+          }
         }
       }
     }
 
-    const adultCount = formData.peopleCount - formData.childCount;
-    const totalAmount = adultCount * unitPrice + formData.childCount * childPrice;
+    const totalAmount = formData.adultCount * adultPrice + formData.childCount * childPrice;
 
     setPricePreview({
-      unitPrice,
+      adultPrice,
       childPrice,
-      adultCount,
+      adultCount: formData.adultCount,
       childCount: formData.childCount,
       totalAmount,
     });
     setSpecialDateWarning(specialWarning);
-  }, [formData.packageId, formData.visitDate, formData.peopleCount, formData.childCount, packages]);
+  }, [formData.packageId, formData.visitDate, formData.adultCount, formData.childCount, packages]);
 
   // 处理输入变化
   const handleChange = (e) => {
@@ -119,36 +117,19 @@ const PublicBookingForm = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // 处理数字输入
-  const handleNumberChange = (name, delta) => {
+  // V2.2: 处理人数变化 - 成人和儿童完全独立
+  const handleAdultChange = (delta) => {
     setFormData((prev) => {
-      let newValue = (prev[name] || 0) + delta;
-      if (name === 'peopleCount') {
-        newValue = Math.max(1, Math.min(50, newValue));
-        // 确保儿童人数不超过总人数
-        if (prev.childCount > newValue) {
-          return { ...prev, [name]: newValue, childCount: newValue };
-        }
-      } else if (name === 'childCount') {
-        newValue = Math.max(0, Math.min(prev.peopleCount, newValue));
-      }
-      return { ...prev, [name]: newValue };
+      const newValue = Math.max(1, Math.min(50, prev.adultCount + delta));
+      return { ...prev, adultCount: newValue };
     });
   };
 
-  // 处理酒店选择
-  const handleHotelChange = (e) => {
-    const selectedId = e.target.value;
-    if (selectedId === 'other') {
-      setFormData((prev) => ({ ...prev, hotelId: null, hotelName: '' }));
-    } else {
-      const hotel = hotels.find((h) => h.id === parseInt(selectedId));
-      setFormData((prev) => ({
-        ...prev,
-        hotelId: hotel?.id || null,
-        hotelName: hotel?.name || '',
-      }));
-    }
+  const handleChildChange = (delta) => {
+    setFormData((prev) => {
+      const newValue = Math.max(0, Math.min(50, prev.childCount + delta));
+      return { ...prev, childCount: newValue };
+    });
   };
 
   // 处理套餐选择
@@ -161,14 +142,14 @@ const PublicBookingForm = () => {
     if (!formData.customerName.trim()) {
       return '请输入姓名';
     }
+    if (formData.customerName.trim().length < 2) {
+      return '姓名至少2个字符';
+    }
     if (!/^1[3-9]\d{9}$/.test(formData.customerPhone)) {
       return '请输入正确的手机号';
     }
     if (!formData.visitDate) {
       return '请选择预约日期';
-    }
-    if (!formData.hotelName.trim()) {
-      return '请选择或输入酒店名称';
     }
     if (!formData.packageId) {
       return '请选择套餐';
@@ -190,7 +171,18 @@ const PublicBookingForm = () => {
     setError('');
 
     try {
-      const response = await api.post('/public/bookings', formData);
+      // V2.2: 发送新格式的数据
+      const response = await api.post('/public/bookings', {
+        customerName: formData.customerName.trim(),
+        customerPhone: formData.customerPhone,
+        customerWechat: formData.customerWechat,
+        adultCount: formData.adultCount,
+        childCount: formData.childCount,
+        accommodationNotes: formData.accommodationNotes,
+        visitDate: formData.visitDate,
+        packageId: formData.packageId,
+        notes: formData.notes,
+      });
 
       if (response.data.success) {
         // 跳转到成功页面，传递预约数据
@@ -229,41 +221,19 @@ const PublicBookingForm = () => {
       {/* 头部 */}
       <div className="bg-blue-600 text-white py-6 px-4">
         <div className="max-w-lg mx-auto text-center">
-          <h1 className="text-2xl font-bold">长白山双溪森林营地</h1>
+          <h1 className="text-2xl font-bold">🏔️ 长白山双溪森林营地</h1>
           <p className="mt-1 text-blue-100">冬季活动预约</p>
         </div>
       </div>
 
-      {/* 表单 */}
+      {/* 表单 - V2.2 调整字段顺序 */}
       <form onSubmit={handleSubmit} className="max-w-lg mx-auto px-4 py-6 space-y-6">
         {/* 错误提示 */}
         {error && (
           <div className="bg-red-50 text-red-600 px-4 py-3 rounded-lg text-sm">{error}</div>
         )}
 
-        {/* 选择日期 */}
-        <div className="bg-white rounded-xl shadow-sm p-4">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            <span className="text-lg mr-2">📅</span>选择日期 <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="date"
-            name="visitDate"
-            value={formData.visitDate}
-            onChange={handleChange}
-            min={getMinDate()}
-            className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            required
-          />
-          {specialDateWarning && (
-            <p className="mt-2 text-amber-600 text-sm flex items-center">
-              <span className="mr-1">⚠️</span>
-              {specialDateWarning}：价格有调整
-            </p>
-          )}
-        </div>
-
-        {/* 个人信息 */}
+        {/* 1. 个人信息 - 放在最前面 */}
         <div className="bg-white rounded-xl shadow-sm p-4 space-y-4">
           <h3 className="font-medium text-gray-900">
             <span className="text-lg mr-2">👤</span>您的信息
@@ -313,111 +283,132 @@ const PublicBookingForm = () => {
           </div>
         </div>
 
-        {/* 参与人数 */}
+        {/* 2. 参与人数 - V2.2 修复Bug：成人和儿童独立控制 */}
         <div className="bg-white rounded-xl shadow-sm p-4 space-y-4">
           <h3 className="font-medium text-gray-900">
             <span className="text-lg mr-2">👥</span>参与人数
           </h3>
 
-          <div className="flex items-center justify-between">
-            <span className="text-gray-600">成人</span>
+          {/* 成人 */}
+          <div className="flex items-center justify-between py-2">
+            <div>
+              <span className="text-gray-800 font-medium">成人</span>
+              <span className="text-gray-500 text-sm ml-2">(4岁以上)</span>
+              <p className="text-blue-600 text-sm">¥{pricePreview.adultPrice}/人</p>
+            </div>
             <div className="flex items-center space-x-4">
               <button
                 type="button"
-                onClick={() => handleNumberChange('peopleCount', -1)}
-                className="w-10 h-10 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center hover:bg-gray-200"
+                onClick={() => handleAdultChange(-1)}
+                disabled={formData.adultCount <= 1}
+                className={`w-10 h-10 rounded-full flex items-center justify-center text-lg font-medium transition-colors ${
+                  formData.adultCount <= 1
+                    ? 'bg-gray-100 text-gray-300 cursor-not-allowed'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
               >
-                -
+                −
               </button>
-              <span className="w-8 text-center font-medium text-lg">
-                {formData.peopleCount - formData.childCount}
-              </span>
+              <span className="w-8 text-center font-medium text-lg">{formData.adultCount}</span>
               <button
                 type="button"
-                onClick={() => handleNumberChange('peopleCount', 1)}
-                className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center hover:bg-blue-200"
+                onClick={() => handleAdultChange(1)}
+                disabled={formData.adultCount >= 50}
+                className={`w-10 h-10 rounded-full flex items-center justify-center text-lg font-medium transition-colors ${
+                  formData.adultCount >= 50
+                    ? 'bg-blue-50 text-blue-200 cursor-not-allowed'
+                    : 'bg-blue-100 text-blue-600 hover:bg-blue-200'
+                }`}
               >
                 +
               </button>
             </div>
           </div>
 
-          <div className="flex items-center justify-between">
-            <span className="text-gray-600">儿童（4岁以下）</span>
+          {/* 儿童 */}
+          <div className="flex items-center justify-between py-2 border-t border-gray-100">
+            <div>
+              <span className="text-gray-800 font-medium">儿童</span>
+              <span className="text-gray-500 text-sm ml-2">(4岁以下)</span>
+              <p className="text-blue-600 text-sm">¥{pricePreview.childPrice}/人</p>
+            </div>
             <div className="flex items-center space-x-4">
               <button
                 type="button"
-                onClick={() => handleNumberChange('childCount', -1)}
-                className="w-10 h-10 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center hover:bg-gray-200"
+                onClick={() => handleChildChange(-1)}
+                disabled={formData.childCount <= 0}
+                className={`w-10 h-10 rounded-full flex items-center justify-center text-lg font-medium transition-colors ${
+                  formData.childCount <= 0
+                    ? 'bg-gray-100 text-gray-300 cursor-not-allowed'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
               >
-                -
+                −
               </button>
               <span className="w-8 text-center font-medium text-lg">{formData.childCount}</span>
               <button
                 type="button"
-                onClick={() => handleNumberChange('childCount', 1)}
-                className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center hover:bg-blue-200"
+                onClick={() => handleChildChange(1)}
+                disabled={formData.childCount >= 50}
+                className={`w-10 h-10 rounded-full flex items-center justify-center text-lg font-medium transition-colors ${
+                  formData.childCount >= 50
+                    ? 'bg-blue-50 text-blue-200 cursor-not-allowed'
+                    : 'bg-blue-100 text-blue-600 hover:bg-blue-200'
+                }`}
               >
                 +
               </button>
             </div>
           </div>
+
+          {/* 合计人数 */}
+          <div className="pt-2 border-t border-gray-100 text-center text-gray-500">
+            合计：<span className="font-medium text-gray-800">{formData.adultCount + formData.childCount}</span> 人
+          </div>
         </div>
 
-        {/* 住宿信息 */}
-        <div className="bg-white rounded-xl shadow-sm p-4 space-y-4">
-          <h3 className="font-medium text-gray-900">
-            <span className="text-lg mr-2">🏨</span>住宿信息
-          </h3>
+        {/* 3. 住宿信息 - V2.2 改为备注文本输入 */}
+        <div className="bg-white rounded-xl shadow-sm p-4">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            <span className="text-lg mr-2">🏨</span>住宿信息（选填）
+          </label>
+          <input
+            type="text"
+            name="accommodationNotes"
+            value={formData.accommodationNotes}
+            onChange={handleChange}
+            placeholder="例如：二道白河喆啡酒店801房"
+            maxLength={100}
+            className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+          <p className="mt-2 text-xs text-gray-400">
+            请填写您的住宿地点（酒店名称、地址等），方便我们安排接送
+          </p>
+        </div>
 
-          <div>
-            <label className="block text-sm text-gray-600 mb-1">
-              选择酒店 <span className="text-red-500">*</span>
-            </label>
-            <select
-              onChange={handleHotelChange}
-              value={formData.hotelId || 'other'}
-              className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              required
-            >
-              <option value="">请选择酒店</option>
-              {hotels.map((hotel) => (
-                <option key={hotel.id || 'other'} value={hotel.id || 'other'}>
-                  {hotel.name}
-                  {hotel.area ? ` (${hotel.area})` : ''}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {formData.hotelId === null && (
-            <div>
-              <label className="block text-sm text-gray-600 mb-1">请输入酒店名称</label>
-              <input
-                type="text"
-                name="hotelName"
-                value={formData.hotelName}
-                onChange={handleChange}
-                placeholder="请输入您入住的酒店名称"
-                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
+        {/* 4. 选择日期 */}
+        <div className="bg-white rounded-xl shadow-sm p-4">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            <span className="text-lg mr-2">📅</span>选择日期 <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="date"
+            name="visitDate"
+            value={formData.visitDate}
+            onChange={handleChange}
+            min={getMinDate()}
+            className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            required
+          />
+          {specialDateWarning && (
+            <p className="mt-2 text-amber-600 text-sm flex items-center">
+              <span className="mr-1">⚠️</span>
+              {specialDateWarning}：价格有调整
+            </p>
           )}
-
-          <div>
-            <label className="block text-sm text-gray-600 mb-1">房间号（选填）</label>
-            <input
-              type="text"
-              name="roomNumber"
-              value={formData.roomNumber}
-              onChange={handleChange}
-              placeholder="方便接送时联系"
-              className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
         </div>
 
-        {/* 选择套餐 */}
+        {/* 5. 选择套餐 */}
         <div className="bg-white rounded-xl shadow-sm p-4 space-y-4">
           <h3 className="font-medium text-gray-900">
             <span className="text-lg mr-2">🎁</span>选择套餐 <span className="text-red-500">*</span>
@@ -460,7 +451,7 @@ const PublicBookingForm = () => {
           </div>
         </div>
 
-        {/* 备注 */}
+        {/* 6. 备注 */}
         <div className="bg-white rounded-xl shadow-sm p-4">
           <label className="block text-sm font-medium text-gray-700 mb-2">
             <span className="text-lg mr-2">📝</span>备注（选填）
@@ -478,11 +469,11 @@ const PublicBookingForm = () => {
 
         {/* 费用预估 */}
         <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-4 text-white">
-          <h3 className="font-medium mb-3">💰 费用预估</h3>
+          <h3 className="font-medium mb-3">💰 费用明细</h3>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <span>成人 {pricePreview.adultCount}人 × ¥{pricePreview.unitPrice}</span>
-              <span>¥{pricePreview.adultCount * pricePreview.unitPrice}</span>
+              <span>成人 {pricePreview.adultCount}人 × ¥{pricePreview.adultPrice}</span>
+              <span>¥{pricePreview.adultCount * pricePreview.adultPrice}</span>
             </div>
             {pricePreview.childCount > 0 && (
               <div className="flex justify-between">

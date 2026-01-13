@@ -123,7 +123,11 @@ const getProjectById = async (req, res) => {
  */
 const createProject = async (req, res) => {
   try {
-    const { name, description, price, unit, season, duration, capacity, isActive, sortOrder } = req.body;
+    const {
+      name, description, price, unit, season, duration, capacity, isActive, sortOrder,
+      // V2.3: 多媒体和展示字段
+      coverImage, images, videos, highlights, precautions, longDescription, showInPublic, displayOrder, badge
+    } = req.body;
 
     // 验证必填字段
     if (!name || price === undefined || !unit || duration === undefined) {
@@ -175,6 +179,16 @@ const createProject = async (req, res) => {
         capacity: capacity ? parseInt(capacity) : null,
         isActive: isActive !== false,
         sortOrder: sortOrder || 0,
+        // V2.3: 多媒体和展示字段
+        coverImage: coverImage || null,
+        images: images || null,
+        videos: videos || null,
+        highlights: highlights || null,
+        precautions: precautions || null,
+        longDescription: longDescription || null,
+        showInPublic: showInPublic !== false,
+        displayOrder: displayOrder || 0,
+        badge: badge || null,
       },
     });
 
@@ -206,7 +220,11 @@ const createProject = async (req, res) => {
 const updateProject = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, description, price, unit, season, duration, capacity, isActive, sortOrder } = req.body;
+    const {
+      name, description, price, unit, season, duration, capacity, isActive, sortOrder,
+      // V2.3: 多媒体和展示字段
+      coverImage, images, videos, highlights, precautions, longDescription, showInPublic, displayOrder, badge
+    } = req.body;
 
     // 检查项目是否存在
     const existingProject = await prisma.project.findUnique({
@@ -256,6 +274,16 @@ const updateProject = async (req, res) => {
     if (capacity !== undefined) updateData.capacity = capacity ? parseInt(capacity) : null;
     if (isActive !== undefined) updateData.isActive = isActive;
     if (sortOrder !== undefined) updateData.sortOrder = sortOrder;
+    // V2.3: 多媒体和展示字段
+    if (coverImage !== undefined) updateData.coverImage = coverImage || null;
+    if (images !== undefined) updateData.images = images || null;
+    if (videos !== undefined) updateData.videos = videos || null;
+    if (highlights !== undefined) updateData.highlights = highlights || null;
+    if (precautions !== undefined) updateData.precautions = precautions || null;
+    if (longDescription !== undefined) updateData.longDescription = longDescription || null;
+    if (showInPublic !== undefined) updateData.showInPublic = showInPublic;
+    if (displayOrder !== undefined) updateData.displayOrder = displayOrder;
+    if (badge !== undefined) updateData.badge = badge || null;
 
     const project = await prisma.project.update({
       where: { id: parseInt(id) },

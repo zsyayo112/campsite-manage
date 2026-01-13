@@ -85,14 +85,17 @@ const BookingSuccess = () => {
             <div className="flex justify-between">
               <span className="text-gray-500">人数</span>
               <span className="font-medium">
-                {booking.peopleCount}人
-                {booking.childCount > 0 && `（含${booking.childCount}名儿童）`}
+                {booking.adultCount + booking.childCount}人
+                （成人{booking.adultCount}人{booking.childCount > 0 && `，儿童${booking.childCount}人`}）
               </span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500">酒店</span>
-              <span className="font-medium">{booking.hotelName}</span>
-            </div>
+            {/* V2.2: 优先显示住宿备注 */}
+            {(booking.accommodationNotes || booking.hotelName) && (
+              <div className="flex justify-between">
+                <span className="text-gray-500">住宿</span>
+                <span className="font-medium">{booking.accommodationNotes || booking.hotelName}</span>
+              </div>
+            )}
             {booking.roomNumber && (
               <div className="flex justify-between">
                 <span className="text-gray-500">房间号</span>
@@ -114,9 +117,9 @@ const BookingSuccess = () => {
           <div className="space-y-3 text-sm">
             <div className="flex justify-between">
               <span className="text-gray-500">
-                成人 {booking.adultCount}人 × ¥{booking.unitPrice}
+                成人 {booking.adultCount}人 × ¥{booking.adultPrice || booking.unitPrice}
               </span>
-              <span className="font-medium">¥{booking.adultCount * booking.unitPrice}</span>
+              <span className="font-medium">¥{booking.adultCount * (booking.adultPrice || booking.unitPrice)}</span>
             </div>
             {booking.childCount > 0 && (
               <div className="flex justify-between">
@@ -139,7 +142,7 @@ const BookingSuccess = () => {
             <span className="text-lg mr-2">📍</span>接送安排
           </h3>
           <div className="space-y-2 text-sm text-gray-600">
-            <p>上午 9:00 {booking.hotelName}大堂集合</p>
+            <p>上午 9:00 {booking.accommodationNotes || booking.hotelName || '酒店'}大堂集合</p>
             <p>下午 16:00 返回酒店</p>
           </div>
         </div>
