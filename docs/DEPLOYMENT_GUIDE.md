@@ -790,6 +790,51 @@ pm2 save
 - 检查 build 目录是否存在
 - 检查 Nginx 配置路径
 
+**4. API 返回 404 但代码正确（PM2 进程冲突）**
+
+这是一个常见但难以发现的问题：当使用 `sudo` 运行部署脚本时，root 用户的 PM2 也会保存服务配置。之后 root 和普通用户的 PM2 都会尝试启动同一个服务，导致端口冲突。
+
+**症状：**
+- PM2 显示进程 `online`，但 `↺` 列（重启次数）不断增加
+- API 返回 404 或连接失败
+- `uptime` 始终显示 0s 或很短
+- 错误日志为空（因为是端口冲突，不是代码错误）
+
+**诊断命令：**
+```bash
+# 检查是否有多个 node 进程
+ps aux | grep node | grep -v grep
+
+# 检查 root 用户的 PM2
+sudo pm2 list
+
+# 检查端口占用
+lsof -i :3001
+```
+
+**解决方法：**
+```bash
+# 1. 停止并删除 root 用户的 PM2 进程
+sudo pm2 delete campsite-backend
+sudo pm2 save --force
+
+# 2. 杀掉所有残留的 node 进程（谨慎使用）
+sudo pkill -f "node.*server.js"
+
+# 3. 重新启动普通用户的 PM2 进程
+pm2 start src/server.js --name campsite-backend
+pm2 save
+
+# 4. 验证只有一个进程在运行
+ps aux | grep node | grep -v grep
+pm2 status
+```
+
+**预防措施：**
+- 不要使用 `sudo` 运行 PM2 命令（除非是删除 root 的配置）
+- 部署脚本中的 PM2 命令不应使用 sudo
+- 定期检查是否有多个 node 进程在运行
+
 ### 有用命令
 
 ```bash

@@ -67,6 +67,7 @@ temp/
 *.tmp
 *.temp
 ~$*
+tmpclaude*
 
 # Cache
 .cache/
