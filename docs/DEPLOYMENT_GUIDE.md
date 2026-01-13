@@ -616,7 +616,9 @@ sudo nano /etc/logrotate.d/campsite
 
 ## 更新部署
 
-### 手动更新
+### 方式一：Git 拉取更新（推荐）
+
+如果服务器能正常访问 GitHub：
 
 ```bash
 cd /var/www/campsite-manage
@@ -627,18 +629,93 @@ git pull origin master
 # 更新后端
 cd backend
 npm install
-npx prisma migrate deploy
+npx prisma db push
 pm2 reload campsite-backend
 
 # 更新前端
 cd ../frontend
 npm install
 npm run build
+
+# 检查状态
+pm2 status
 ```
 
-### 自动化脚本
+### 方式二：SSH 密钥配置（解决 GitHub 访问慢问题）
 
-**/opt/scripts/deploy.sh:**
+国内服务器访问 GitHub 可能较慢，配置 SSH 密钥可以提高稳定性：
+
+```bash
+# 1. 生成 SSH 密钥
+ssh-keygen -t ed25519 -C "your_email@example.com"
+# 按回车使用默认路径，密码可留空
+
+# 2. 查看公钥
+cat ~/.ssh/id_ed25519.pub
+
+# 3. 将公钥添加到 GitHub
+#    打开 https://github.com/settings/keys
+#    点击 "New SSH key"，粘贴公钥并保存
+
+# 4. 修改远程地址为 SSH
+cd /var/www/campsite-manage
+git remote set-url origin git@github.com:你的用户名/campsite-manage.git
+
+# 5. 以后更新
+git pull origin master
+```
+
+### 方式三：本地打包上传（GitHub 无法访问时）
+
+当服务器无法访问 GitHub 时，可以从本地上传：
+
+**1. 本地打包（在 Windows PowerShell 执行）：**
+```powershell
+cd C:\Users\你的用户名\Desktop\campsite-manage
+tar --exclude='node_modules' --exclude='.git' --exclude='tmpclaude*' -czvf ../campsite-update.tar.gz backend/src backend/prisma frontend/src scripts
+```
+
+**2. 上传到服务器：**
+```powershell
+scp C:\Users\你的用户名\Desktop\campsite-update.tar.gz ubuntu@服务器IP:~/
+```
+
+**3. 服务器上解压并部署：**
+```bash
+# 移动文件
+sudo mv ~/campsite-update.tar.gz /var/www/
+
+# 解压到项目目录
+cd /var/www
+sudo tar -xzvf campsite-update.tar.gz -C campsite-manage
+sudo chown -R $USER:$USER campsite-manage
+
+# 部署后端
+cd campsite-manage/backend
+npm install
+npx prisma db push
+pm2 reload campsite-backend
+
+# 部署前端
+cd ../frontend
+npm install
+npm run build
+
+# 检查状态
+pm2 status
+```
+
+### 自动化更新脚本
+
+项目已包含更新脚本 `scripts/update.sh`，配置好 Git 后可直接使用：
+
+```bash
+cd /var/www/campsite-manage
+chmod +x scripts/update.sh
+./scripts/update.sh
+```
+
+**脚本内容 (scripts/update.sh):**
 ```bash
 #!/bin/bash
 set -e
@@ -646,21 +723,52 @@ set -e
 PROJECT_DIR="/var/www/campsite-manage"
 cd $PROJECT_DIR
 
-echo "Pulling latest code..."
+echo "=== 拉取最新代码 ==="
 git pull origin master
 
-echo "Updating backend..."
+echo "=== 更新后端 ==="
 cd backend
 npm install
-npx prisma migrate deploy
+npx prisma db push
+
+echo "=== 重启后端服务 ==="
 pm2 reload campsite-backend
 
-echo "Updating frontend..."
+echo "=== 更新前端 ==="
 cd ../frontend
 npm install
 npm run build
 
-echo "Deployment completed!"
+echo "=== 部署完成！==="
+pm2 status
+```
+
+### 常见问题
+
+**1. Git 权限问题**
+```bash
+# 添加安全目录
+git config --global --add safe.directory /var/www/campsite-manage
+
+# 修复目录权限
+sudo chown -R $USER:$USER /var/www/campsite-manage
+```
+
+**2. Prisma Schema 错误**
+```bash
+# 如果提示 SQLite URL 错误，需要使用 PostgreSQL schema
+cd /var/www/campsite-manage/backend
+cp prisma/schema.postgresql.prisma prisma/schema.prisma
+npx prisma generate
+npx prisma db push
+```
+
+**3. PM2 进程不存在**
+```bash
+# 重新启动后端服务
+cd /var/www/campsite-manage/backend
+pm2 start src/server.js --name campsite-backend
+pm2 save
 ```
 
 ---
