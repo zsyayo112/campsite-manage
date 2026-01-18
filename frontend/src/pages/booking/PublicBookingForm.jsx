@@ -221,8 +221,8 @@ const PublicBookingForm = () => {
       {/* 头部 */}
       <div className="bg-blue-600 text-white py-6 px-4">
         <div className="max-w-lg mx-auto text-center">
-          <h1 className="text-2xl font-bold">🏔️ 长白山双溪森林营地</h1>
-          <p className="mt-1 text-blue-100">冬季活动预约</p>
+          <h1 className="text-xl font-bold">原始森林一日营</h1>
+          <p className="mt-1 text-blue-100">@长白山双溪森林营地</p>
         </div>
       </div>
 
