@@ -89,6 +89,18 @@ router.post('/', requireRole(['admin', 'operator']), orderController.createOrder
 router.patch('/:id/status', requireRole(['admin', 'operator']), orderController.updateOrderStatus);
 
 /**
+ * @route   PATCH /api/orders/:id/payment
+ * @desc    更新订单付款金额（收款）
+ * @access  Private (admin, operator)
+ * @param   id - 订单ID
+ * @body    {
+ *   amount: number (金额),
+ *   action: string ('add' 追加收款, 'set' 设置总已付金额，默认 'set')
+ * }
+ */
+router.patch('/:id/payment', requireRole(['admin', 'operator']), orderController.updateOrderPayment);
+
+/**
  * @route   DELETE /api/orders/:id
  * @desc    删除订单（仅限待处理或已取消的订单）
  * @access  Private (admin)

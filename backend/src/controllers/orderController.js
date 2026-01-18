@@ -775,6 +775,100 @@ const updateOrderStatus = async (req, res) => {
 };
 
 /**
+ * @route   PATCH /api/orders/:id/payment
+ * @desc    更新订单付款金额
+ * @access  Private (admin, operator)
+ */
+const updateOrderPayment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { amount, action } = req.body; // action: 'add' (追加收款) 或 'set' (设置总已付金额)
+
+    if (amount === undefined || amount < 0) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: '金额无效',
+        },
+      });
+    }
+
+    // 检查订单是否存在
+    const order = await prisma.order.findUnique({
+      where: { id: parseInt(id) },
+    });
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          code: 'ORDER_NOT_FOUND',
+          message: '订单不存在',
+        },
+      });
+    }
+
+    // 计算新的已付金额
+    let newPaidAmount;
+    if (action === 'add') {
+      // 追加收款
+      newPaidAmount = parseFloat(order.paidAmount) + parseFloat(amount);
+    } else {
+      // 直接设置已付金额
+      newPaidAmount = parseFloat(amount);
+    }
+
+    const totalAmount = parseFloat(order.totalAmount);
+
+    // 确保不超过总金额
+    if (newPaidAmount > totalAmount) {
+      newPaidAmount = totalAmount;
+    }
+
+    // 计算支付状态
+    let paymentStatus = 'unpaid';
+    if (newPaidAmount >= totalAmount) {
+      paymentStatus = 'paid';
+    } else if (newPaidAmount > 0) {
+      paymentStatus = 'partial';
+    }
+
+    // 更新订单
+    const updatedOrder = await prisma.order.update({
+      where: { id: parseInt(id) },
+      data: {
+        paidAmount: newPaidAmount,
+        paymentStatus: paymentStatus,
+      },
+      include: {
+        customer: {
+          select: { id: true, name: true, phone: true },
+        },
+        accommodationPlace: {
+          select: { id: true, name: true },
+        },
+      },
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: updatedOrder,
+      message: paymentStatus === 'paid' ? '已收全款' : `收款成功，待收 ¥${(totalAmount - newPaidAmount).toFixed(0)}`,
+    });
+  } catch (error) {
+    console.error('更新付款金额失败:', error);
+    return res.status(500).json({
+      success: false,
+      error: {
+        code: 'UPDATE_PAYMENT_ERROR',
+        message: '更新付款金额失败',
+      },
+    });
+  }
+};
+
+/**
  * @route   DELETE /api/orders/:id
  * @desc    删除订单
  * @access  Private (admin)
@@ -1105,6 +1199,7 @@ module.exports = {
   getOrders,
   getOrderById,
   updateOrderStatus,
+  updateOrderPayment,
   deleteOrder,
   getOrderStats,
   exportOrders,

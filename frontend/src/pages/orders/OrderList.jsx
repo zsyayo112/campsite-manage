@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../components/common/Toast';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
-import { getOrders, deleteOrder, updateOrderStatus, exportOrders } from '../../api/orders';
+import { getOrders, deleteOrder, updateOrderStatus, updateOrderPayment, exportOrders } from '../../api/orders';
 
 // 订单状态映射
 const statusMap = {
@@ -49,6 +49,12 @@ const OrderList = () => {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
+
+  // 收款弹窗状态
+  const [isPaymentOpen, setIsPaymentOpen] = useState(false);
+  const [paymentOrder, setPaymentOrder] = useState(null);
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentLoading, setPaymentLoading] = useState(false);
 
   // 获取订单列表
   const fetchOrders = useCallback(async () => {
@@ -165,6 +171,59 @@ const OrderList = () => {
     } catch (error) {
       console.error('更新状态失败:', error);
       toast.error(error.response?.data?.error?.message || '状态更新失败');
+    }
+  };
+
+  // 打开收款弹窗
+  const handleOpenPayment = (order) => {
+    setPaymentOrder(order);
+    // 默认填入待收金额
+    const remaining = Number(order.totalAmount) - Number(order.paidAmount || 0);
+    setPaymentAmount(remaining > 0 ? remaining.toString() : '');
+    setIsPaymentOpen(true);
+  };
+
+  // 确认收款
+  const handleConfirmPayment = async () => {
+    if (!paymentOrder || !paymentAmount) return;
+
+    setPaymentLoading(true);
+    try {
+      const result = await updateOrderPayment(paymentOrder.id, {
+        amount: parseFloat(paymentAmount),
+        action: 'add', // 追加收款
+      });
+      toast.success(result.message || '收款成功');
+      setIsPaymentOpen(false);
+      setPaymentOrder(null);
+      setPaymentAmount('');
+      fetchOrders();
+    } catch (error) {
+      console.error('收款失败:', error);
+      toast.error(error.response?.data?.error?.message || '收款失败');
+    } finally {
+      setPaymentLoading(false);
+    }
+  };
+
+  // 一键收全款
+  const handleCollectFullPayment = async (order) => {
+    const remaining = Number(order.totalAmount) - Number(order.paidAmount || 0);
+    if (remaining <= 0) {
+      toast.info('该订单已收全款');
+      return;
+    }
+
+    try {
+      const result = await updateOrderPayment(order.id, {
+        amount: Number(order.totalAmount),
+        action: 'set', // 设置为全款
+      });
+      toast.success(result.message || '已收全款');
+      fetchOrders();
+    } catch (error) {
+      console.error('收款失败:', error);
+      toast.error(error.response?.data?.error?.message || '收款失败');
     }
   };
 
@@ -627,6 +686,18 @@ const OrderList = () => {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-2">
+                        {/* 收款按钮 - 只在未付清时显示 */}
+                        {order.paymentStatus !== 'paid' && order.status !== 'cancelled' && (
+                          <button
+                            onClick={() => handleCollectFullPayment(order)}
+                            className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
+                            title="收全款"
+                          >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                          </button>
+                        )}
                         <button
                           onClick={() => handleViewDetail(order.id)}
                           className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"

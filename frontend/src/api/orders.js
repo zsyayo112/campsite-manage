@@ -61,6 +61,17 @@ export const deleteOrder = async (id) => {
 };
 
 /**
+ * 更新订单付款金额（收款）
+ * @param {number} id - 订单ID
+ * @param {object} data - 收款数据 { amount, action: 'add' | 'set' }
+ * @returns {Promise}
+ */
+export const updateOrderPayment = async (id, data) => {
+  const response = await api.patch(`/orders/${id}/payment`, data);
+  return response.data;
+};
+
+/**
  * 获取订单统计
  * @param {object} params - 查询参数
  * @returns {Promise}
@@ -130,6 +141,7 @@ const ordersApi = {
   getOrderById,
   createOrder,
   updateOrderStatus,
+  updateOrderPayment,
   deleteOrder,
   getOrderStats,
   getAccommodations,
