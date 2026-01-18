@@ -2,7 +2,20 @@ import axios from 'axios';
 import useAuthStore from '../store/authStore';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
-const SERVER_BASE_URL = process.env.REACT_APP_SERVER_URL || 'http://localhost:5000';
+
+// 获取服务器基础URL（自动检测当前环境）
+const getServerBaseUrl = () => {
+  // 如果设置了环境变量，使用环境变量
+  if (process.env.REACT_APP_SERVER_URL) {
+    return process.env.REACT_APP_SERVER_URL;
+  }
+  // 生产环境：使用当前域名
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+    return `${window.location.protocol}//${window.location.host}`;
+  }
+  // 本地开发环境
+  return 'http://localhost:5000';
+};
 
 // 获取完整的静态文件URL（用于图片、视频等）
 export const getFileUrl = (path) => {
@@ -12,7 +25,7 @@ export const getFileUrl = (path) => {
     return path;
   }
   // 否则拼接服务器地址
-  return `${SERVER_BASE_URL}${path}`;
+  return `${getServerBaseUrl()}${path}`;
 };
 
 const api = axios.create({
