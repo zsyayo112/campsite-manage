@@ -198,8 +198,9 @@ model Order {
   visitDate            DateTime  @map("visit_date")
   peopleCount          Int       @map("people_count")
   totalAmount          Decimal   @map("total_amount")
+  paidAmount           Decimal   @default(0) @map("paid_amount")  // 已付金额（定金+尾款）
   status               String    // pending, confirmed, completed, cancelled
-  paymentStatus        String    @map("payment_status") // unpaid, paid, refunded
+  paymentStatus        String    @map("payment_status") // unpaid, partial, paid, refunded
   notes                String?
   createdAt            DateTime  @default(now()) @map("created_at")
   updatedAt            DateTime  @updatedAt @map("updated_at")

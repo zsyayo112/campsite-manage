@@ -15,6 +15,7 @@ const statusMap = {
 // 支付状态映射
 const paymentStatusMap = {
   unpaid: { label: '未支付', color: 'bg-red-100 text-red-700' },
+  partial: { label: '部分付款', color: 'bg-yellow-100 text-yellow-700' },
   paid: { label: '已支付', color: 'bg-green-100 text-green-700' },
   refunded: { label: '已退款', color: 'bg-orange-100 text-orange-700' },
 };
@@ -568,8 +569,15 @@ const OrderList = () => {
                     <td className="px-4 py-3 text-gray-600">
                       {order.peopleCount} 人
                     </td>
-                    <td className="px-4 py-3 font-medium text-gray-900">
-                      {formatAmount(order.totalAmount)}
+                    <td className="px-4 py-3">
+                      <div className="font-medium text-gray-900">
+                        {formatAmount(order.totalAmount)}
+                      </div>
+                      {order.paidAmount > 0 && order.paidAmount < order.totalAmount && (
+                        <div className="text-xs text-orange-600">
+                          已付 {formatAmount(order.paidAmount)} / 待付 {formatAmount(order.totalAmount - order.paidAmount)}
+                        </div>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <div className="relative group">

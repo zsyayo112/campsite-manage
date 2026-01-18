@@ -606,6 +606,16 @@ const convertToOrder = async (req, res) => {
     }
     const orderNumber = `ORD${dateStr}${sequence.toString().padStart(4, '0')}`;
 
+    // 计算支付状态
+    const paidAmount = parseFloat(booking.depositAmount) || 0;
+    const totalAmount = parseFloat(booking.totalAmount) || 0;
+    let paymentStatus = 'unpaid';
+    if (paidAmount >= totalAmount) {
+      paymentStatus = 'paid';
+    } else if (paidAmount > 0) {
+      paymentStatus = 'partial';
+    }
+
     // 创建订单
     const order = await prisma.order.create({
       data: {
@@ -619,8 +629,9 @@ const convertToOrder = async (req, res) => {
         visitDate: booking.visitDate,
         peopleCount: booking.peopleCount,
         totalAmount: booking.totalAmount,
+        paidAmount: paidAmount,
         status: 'confirmed',
-        paymentStatus: booking.depositAmount > 0 ? 'paid' : 'unpaid',
+        paymentStatus: paymentStatus,
         notes: booking.customerNotes,
       },
       include: {
