@@ -4,6 +4,7 @@ const {
   calculateBookingPrice,
   generateConfirmText,
 } = require('./bookingController');
+const { syncCustomer, syncBooking } = require('../utils/sqlServerSync');
 
 // 简单的频率限制存储（生产环境建议使用 Redis）
 const rateLimitStore = new Map();
@@ -311,6 +312,47 @@ const submitBooking = async (req, res) => {
 
     // 生成确认文本
     const confirmText = generateConfirmText(booking, packageName);
+
+    // ============ 双写逻辑：同步到父亲的 SQL Server 数据库 ============
+    // 异步执行，不阻塞主流程，失败不影响预约提交
+    (async () => {
+      try {
+        // 1. 同步客户信息
+        await syncCustomer({
+          name: customerName,
+          phone: customerPhone,
+          wechat: customerWechat,
+          source: 'wechat_form',
+          notes: '',
+        });
+
+        // 2. 同步预约信息
+        await syncBooking({
+          bookingCode,
+          customerName,
+          customerPhone,
+          visitDate,
+          peopleCount: totalPeople,
+          adultCount: finalAdultCount,
+          childCount: finalChildCount,
+          hotelName: finalHotelName,
+          roomNumber,
+          accommodationNotes: finalAccommodationNotes,
+          packageName: packageName || '待定',
+          totalAmount: priceInfo.totalAmount,
+          unitPrice: priceInfo.adultPrice,  // 单价
+          depositAmount: 0,
+          status: 'pending',  // 在父亲系统中显示"待确认"
+          notes: notes,
+        });
+
+        console.log(`[双写] 预约 ${bookingCode} 同步到 SQL Server 成功`);
+      } catch (syncError) {
+        // 记录错误但不影响主流程
+        console.error(`[双写] 预约 ${bookingCode} 同步到 SQL Server 失败:`, syncError.message);
+      }
+    })();
+    // ============ 双写逻辑结束 ============
 
     // 格式化返回日期
     const visitDateObj = new Date(visitDate);

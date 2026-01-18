@@ -1,5 +1,6 @@
 const prisma = require('../utils/prisma');
 const { Prisma } = require('@prisma/client');
+const { syncCustomer, syncBooking } = require('../utils/sqlServerSync');
 
 /**
  * 生成预约确认码
@@ -662,6 +663,37 @@ const convertToOrder = async (req, res) => {
         lastVisitDate: booking.visitDate,
       },
     });
+
+    // ============ 双写逻辑：同步订单状态到 SQL Server ============
+    // 异步执行，不阻塞主流程
+    (async () => {
+      try {
+        // 同步更新后的预约/订单状态 - 在父亲系统中显示"已确认"
+        await syncBooking({
+          bookingCode: booking.bookingCode,
+          customerName: booking.customerName,
+          customerPhone: booking.customerPhone,
+          visitDate: booking.visitDate,
+          peopleCount: booking.peopleCount,
+          adultCount: booking.adultCount || booking.peopleCount - (booking.childCount || 0),
+          childCount: booking.childCount || 0,
+          hotelName: booking.hotelName,
+          roomNumber: booking.roomNumber,
+          accommodationNotes: booking.accommodationNotes,
+          packageName: booking.packageName,
+          totalAmount: parseFloat(booking.totalAmount),
+          unitPrice: parseFloat(booking.unitPrice),
+          depositAmount: parseFloat(booking.depositAmount) || 0,
+          status: 'converted',  // 在父亲系统中会显示"已确认"
+          notes: `订单号:${orderNumber}`,
+        });
+
+        console.log(`[双写] 预约 ${booking.bookingCode} 转订单同步成功`);
+      } catch (syncError) {
+        console.error(`[双写] 预约转订单同步失败:`, syncError.message);
+      }
+    })();
+    // ============ 双写逻辑结束 ============
 
     return res.status(201).json({
       success: true,
