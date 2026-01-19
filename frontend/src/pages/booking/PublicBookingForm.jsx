@@ -294,7 +294,6 @@ const PublicBookingForm = () => {
             <div>
               <span className="text-gray-800 font-medium">成人</span>
               <span className="text-gray-500 text-sm ml-2">(4岁以上)</span>
-              <p className="text-blue-600 text-sm">¥{pricePreview.adultPrice}/人</p>
             </div>
             <div className="flex items-center space-x-4">
               <button
@@ -330,7 +329,6 @@ const PublicBookingForm = () => {
             <div>
               <span className="text-gray-800 font-medium">儿童</span>
               <span className="text-gray-500 text-sm ml-2">(4岁以下)</span>
-              <p className="text-blue-600 text-sm">¥{pricePreview.childPrice}/人</p>
             </div>
             <div className="flex items-center space-x-4">
               <button
