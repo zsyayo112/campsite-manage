@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../../utils/api';
 
 /**
- * V2.5 公开预约表单 - 手机满屏版
+ * V2.6 公开预约表单 - 固定布局版
  */
 const PublicBookingForm = () => {
   const navigate = useNavigate();
@@ -158,14 +158,14 @@ const PublicBookingForm = () => {
 
   if (loading) {
     return (
-      <div className="h-screen bg-gradient-to-br from-teal-400 via-emerald-400 to-green-500 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-teal-400 via-emerald-400 to-green-500 flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-2 border-white border-t-transparent"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-teal-400 via-emerald-400 to-green-500 flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-teal-400 via-emerald-400 to-green-500">
       {/* 头部 */}
       <div className="text-white text-center py-3 px-4">
         <h1 className="text-base font-bold drop-shadow-sm">原始森林一日营@长白山双溪森林营地</h1>
@@ -173,13 +173,13 @@ const PublicBookingForm = () => {
       </div>
 
       {/* 表单卡片 */}
-      <form onSubmit={handleSubmit} className="flex-1 mx-3 mb-3 bg-white/95 backdrop-blur rounded-2xl shadow-xl p-3 flex flex-col">
+      <form onSubmit={handleSubmit} className="max-w-lg mx-3 bg-white/95 backdrop-blur rounded-2xl shadow-xl p-3 space-y-2">
         {error && (
-          <div className="bg-red-50 text-red-500 px-3 py-1.5 rounded-lg text-xs mb-2">{error}</div>
+          <div className="bg-red-50 text-red-500 px-3 py-1.5 rounded-lg text-xs">{error}</div>
         )}
 
         {/* 日期 + 人数 */}
-        <div className="flex gap-2 mb-2">
+        <div className="flex gap-2">
           <div className="flex-1 bg-gray-50 rounded-xl p-2.5">
             <div className="text-gray-500 text-xs mb-1">出行日期</div>
             <input type="date" name="visitDate" value={formData.visitDate} onChange={handleChange} min={getMinDate()}
@@ -212,14 +212,14 @@ const PublicBookingForm = () => {
         </div>
 
         {/* 联系信息 */}
-        <div className="grid grid-cols-2 gap-2 mb-2">
+        <div className="grid grid-cols-2 gap-2">
           <input type="text" name="customerName" value={formData.customerName} onChange={handleChange}
             placeholder="姓名" className="bg-gray-50 rounded-xl px-3 py-2.5 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50" required />
           <input type="tel" name="customerPhone" value={formData.customerPhone} onChange={handleChange}
             placeholder="手机号" maxLength={11} className="bg-gray-50 rounded-xl px-3 py-2.5 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50" required />
         </div>
 
-        <div className="grid grid-cols-2 gap-2 mb-2">
+        <div className="grid grid-cols-2 gap-2">
           <input type="text" name="customerWechat" value={formData.customerWechat} onChange={handleChange}
             placeholder="微信号" className="bg-gray-50 rounded-xl px-3 py-2.5 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50" />
           <input type="text" name="accommodationNotes" value={formData.accommodationNotes} onChange={handleChange}
@@ -227,7 +227,7 @@ const PublicBookingForm = () => {
         </div>
 
         {/* 套餐选择 */}
-        <div className="flex-1 mb-2">
+        <div>
           <div className="text-gray-700 text-xs font-medium mb-1.5">选择套餐</div>
           <div className="space-y-1.5">
             {packages.map((pkg) => (
@@ -235,7 +235,7 @@ const PublicBookingForm = () => {
                 className={`p-2.5 rounded-xl border-2 cursor-pointer transition-all ${
                   formData.packageId === pkg.id
                     ? 'border-emerald-500 bg-emerald-50'
-                    : 'border-gray-100 bg-gray-50 hover:border-emerald-200'
+                    : 'border-gray-100 bg-gray-50'
                 }`}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -259,7 +259,7 @@ const PublicBookingForm = () => {
         {/* 备注 */}
         <input type="text" name="notes" value={formData.notes} onChange={handleChange}
           placeholder="备注信息（选填）" maxLength={500}
-          className="bg-gray-50 rounded-xl px-3 py-2.5 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 mb-3" />
+          className="w-full bg-gray-50 rounded-xl px-3 py-2.5 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50" />
 
         {/* 底部：费用 + 提交 */}
         <div className="bg-gradient-to-r from-emerald-500 to-teal-500 rounded-xl p-3 flex items-center justify-between">
