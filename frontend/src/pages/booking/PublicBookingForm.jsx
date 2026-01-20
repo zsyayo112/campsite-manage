@@ -31,7 +31,7 @@ const PublicBookingForm = () => {
 
   const [pricePreview, setPricePreview] = useState({
     adultPrice: 298,
-    childPrice: 238,
+    childPrice: 338,
     adultCount: 2,
     childCount: 0,
     totalAmount: 596,
@@ -66,12 +66,12 @@ const PublicBookingForm = () => {
   useEffect(() => {
     const pkg = packages.find((p) => p.id === formData.packageId);
     let adultPrice = 298;
-    let childPrice = 238;
+    let childPrice = 338;
     let specialWarning = '';
 
     if (pkg) {
       adultPrice = pkg.price || 298;
-      childPrice = pkg.childPrice || 238;
+      childPrice = pkg.childPrice || 338;
 
       if (pkg.specialPricing && formData.visitDate) {
         const visitDateStr = formData.visitDate;
