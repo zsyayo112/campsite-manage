@@ -2,6 +2,20 @@
 
 > 版本：V2.3
 > 最后更新：2026年1月
+> **系统访问地址：https://camp.cbs517.cn**
+
+---
+
+## 快速访问链接
+
+| 页面 | 地址 |
+|------|------|
+| 🏠 关于我们 | https://camp.cbs517.cn/about |
+| 🎯 活动列表 | https://camp.cbs517.cn/activities |
+| 📦 套餐列表 | https://camp.cbs517.cn/packages |
+| 📝 在线预约 | https://camp.cbs517.cn/book |
+| 🔍 订单查询 | https://camp.cbs517.cn/my-orders |
+| 🔐 管理后台 | https://camp.cbs517.cn/login |
 
 ---
 
