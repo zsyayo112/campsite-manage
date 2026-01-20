@@ -271,8 +271,8 @@ const PublicBookingForm = () => {
     <div className="min-h-screen bg-gradient-to-br from-teal-400 via-emerald-400 to-green-500 flex flex-col">
       {/* 头部 */}
       <div className="text-white text-center py-4 px-4">
-        <h1 className="text-lg font-bold drop-shadow-sm">原始森林一日营@长白山双溪森林营地</h1>
-        <p className="text-white/80 text-sm mt-1">在线预约</p>
+        <h1 className="text-lg font-bold drop-shadow-sm">原始森林一日营@长白山双溪森林营地·在线预约</h1>
+        {/* <p className="text-white/80 text-sm mt-1">在线预约</p> */}
       </div>
 
       {/* 表单卡片 */}
@@ -297,7 +297,7 @@ const PublicBookingForm = () => {
               <textarea
                 value={quickInput}
                 onChange={handleQuickInputChange}
-                placeholder="粘贴客人发的文字，如：&#10;薛月华13585329668，2人，住蓝景"
+                placeholder="粘贴文字，如：&#10;郑xx,13xxxxxxxxx,2人,住蓝景"
                 className="w-full bg-white border border-emerald-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-emerald-500 resize-none"
                 rows={2}
               />
@@ -365,16 +365,14 @@ const PublicBookingForm = () => {
             <div className="space-y-2">
               {packages.map((pkg) => (
                 <div key={pkg.id} onClick={() => handlePackageChange(pkg.id)}
-                  className={`p-3 rounded-xl border-2 cursor-pointer transition-all ${
-                    formData.packageId === pkg.id
-                      ? 'border-emerald-500 bg-emerald-50'
-                      : 'border-gray-100 bg-gray-50'
-                  }`}>
+                  className={`p-3 rounded-xl border-2 cursor-pointer transition-all ${formData.packageId === pkg.id
+                    ? 'border-emerald-500 bg-emerald-50'
+                    : 'border-gray-100 bg-gray-50'
+                    }`}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
-                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                        formData.packageId === pkg.id ? 'border-emerald-500' : 'border-gray-300'
-                      }`}>
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${formData.packageId === pkg.id ? 'border-emerald-500' : 'border-gray-300'
+                        }`}>
                         {formData.packageId === pkg.id && <div className="w-2.5 h-2.5 rounded-full bg-emerald-500"></div>}
                       </div>
                       <span className="text-base font-medium text-gray-800">{pkg.name}</span>
@@ -403,11 +401,10 @@ const PublicBookingForm = () => {
               <div className="text-white font-bold text-2xl">¥{pricePreview.totalAmount}</div>
             </div>
             <button type="submit" disabled={submitting}
-              className={`px-10 py-3 rounded-xl font-bold text-base transition-all ${
-                submitting
-                  ? 'bg-white/50 text-emerald-600 cursor-not-allowed'
-                  : 'bg-white text-emerald-600 shadow-lg active:scale-95'
-              }`}>
+              className={`px-10 py-3 rounded-xl font-bold text-base transition-all ${submitting
+                ? 'bg-white/50 text-emerald-600 cursor-not-allowed'
+                : 'bg-white text-emerald-600 shadow-lg active:scale-95'
+                }`}>
               {submitting ? '提交中...' : '立即预约'}
             </button>
           </div>
