@@ -3,12 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import api from '../../utils/api';
 
 /**
- * V2.3 公开预约表单 - 精简版
- *
- * 优化内容：
- * 1. 压缩版面，减少行间距
- * 2. 配色改为柔和的绿色系，适合年轻妈妈群体
- * 3. 精简文案，去除冗余文字
+ * V2.4 公开预约表单 - 超紧凑版
+ * 目标：一屏显示完整表单，无需滚动
  */
 const PublicBookingForm = () => {
   const navigate = useNavigate();
@@ -37,8 +33,6 @@ const PublicBookingForm = () => {
     totalAmount: 596,
   });
 
-  const [specialDateWarning, setSpecialDateWarning] = useState('');
-
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -47,15 +41,11 @@ const PublicBookingForm = () => {
         if (packagesRes.data.success) {
           setPackages(packagesRes.data.data);
           if (packagesRes.data.data.length > 0) {
-            setFormData((prev) => ({
-              ...prev,
-              packageId: packagesRes.data.data[0].id,
-            }));
+            setFormData((prev) => ({ ...prev, packageId: packagesRes.data.data[0].id }));
           }
         }
       } catch (err) {
-        console.error('加载数据失败:', err);
-        setError('加载失败，请刷新重试');
+        setError('加载失败，请刷新');
       } finally {
         setLoading(false);
       }
@@ -67,35 +57,30 @@ const PublicBookingForm = () => {
     const pkg = packages.find((p) => p.id === formData.packageId);
     let adultPrice = 298;
     let childPrice = 338;
-    let specialWarning = '';
 
     if (pkg) {
       adultPrice = pkg.price || 298;
       childPrice = pkg.childPrice || 338;
 
       if (pkg.specialPricing && formData.visitDate) {
-        const visitDateStr = formData.visitDate;
         for (const [dateRange, pricing] of Object.entries(pkg.specialPricing)) {
           const [start, end] = dateRange.split('~');
-          if (visitDateStr >= start && visitDateStr <= end) {
+          if (formData.visitDate >= start && formData.visitDate <= end) {
             adultPrice = pricing.price || adultPrice;
             childPrice = pricing.childPrice || childPrice;
-            specialWarning = pricing.label || '特殊日期价格';
             break;
           }
         }
       }
     }
 
-    const totalAmount = formData.adultCount * adultPrice + formData.childCount * childPrice;
     setPricePreview({
       adultPrice,
       childPrice,
       adultCount: formData.adultCount,
       childCount: formData.childCount,
-      totalAmount,
+      totalAmount: formData.adultCount * adultPrice + formData.childCount * childPrice,
     });
-    setSpecialDateWarning(specialWarning);
   }, [formData.packageId, formData.visitDate, formData.adultCount, formData.childCount, packages]);
 
   const handleChange = (e) => {
@@ -104,17 +89,17 @@ const PublicBookingForm = () => {
   };
 
   const handleAdultChange = (delta) => {
-    setFormData((prev) => {
-      const newValue = Math.max(1, Math.min(50, prev.adultCount + delta));
-      return { ...prev, adultCount: newValue };
-    });
+    setFormData((prev) => ({
+      ...prev,
+      adultCount: Math.max(1, Math.min(50, prev.adultCount + delta)),
+    }));
   };
 
   const handleChildChange = (delta) => {
-    setFormData((prev) => {
-      const newValue = Math.max(0, Math.min(50, prev.childCount + delta));
-      return { ...prev, childCount: newValue };
-    });
+    setFormData((prev) => ({
+      ...prev,
+      childCount: Math.max(0, Math.min(50, prev.childCount + delta)),
+    }));
   };
 
   const handlePackageChange = (packageId) => {
@@ -125,7 +110,7 @@ const PublicBookingForm = () => {
     if (!formData.customerName.trim()) return '请输入姓名';
     if (formData.customerName.trim().length < 2) return '姓名至少2个字符';
     if (!/^1[3-9]\d{9}$/.test(formData.customerPhone)) return '请输入正确的手机号';
-    if (!formData.visitDate) return '请选择预约日期';
+    if (!formData.visitDate) return '请选择日期';
     if (!formData.packageId) return '请选择套餐';
     return null;
   };
@@ -160,7 +145,6 @@ const PublicBookingForm = () => {
         setError(response.data.error?.message || '提交失败');
       }
     } catch (err) {
-      console.error('提交预约失败:', err);
       setError(err.response?.data?.error?.message || '提交失败，请稍后重试');
     } finally {
       setSubmitting(false);
@@ -175,258 +159,134 @@ const PublicBookingForm = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-emerald-500 mx-auto"></div>
-          <p className="mt-3 text-gray-500 text-sm">加载中...</p>
-        </div>
+      <div className="min-h-screen bg-emerald-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-emerald-50 via-green-50 to-white">
-      {/* 头部 - 紧凑版 */}
-      <div className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white py-3 px-4">
+    <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white">
+      {/* 头部 - 单行 */}
+      <div className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white py-2.5 px-3">
         <div className="max-w-lg mx-auto text-center">
-          <h1 className="text-base font-bold">原始森林一日营@长白山双溪森林营地</h1>
-          <p className="text-emerald-100 text-xs mt-0.5">预约系统</p>
+          <h1 className="text-sm font-bold">原始森林一日营@长白山双溪森林营地 · 预约系统</h1>
         </div>
       </div>
 
-      {/* 表单 - 紧凑版 */}
-      <form onSubmit={handleSubmit} className="max-w-lg mx-auto px-3 py-3 space-y-3">
-        {/* 错误提示 */}
+      {/* 表单 */}
+      <form onSubmit={handleSubmit} className="max-w-lg mx-auto px-3 py-2 space-y-2">
         {error && (
-          <div className="bg-red-50 text-red-600 px-3 py-2 rounded-lg text-sm">{error}</div>
+          <div className="bg-red-50 text-red-600 px-3 py-1.5 rounded-lg text-xs">{error}</div>
         )}
 
-        {/* 个人信息 */}
-        <div className="bg-white rounded-xl shadow-sm p-3 space-y-2.5">
-          <h3 className="font-medium text-gray-800 text-sm flex items-center">
-            <span className="w-5 h-5 bg-emerald-100 rounded-full flex items-center justify-center mr-2 text-xs">1</span>
-            您的信息
-          </h3>
-
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <input
-                type="text"
-                name="customerName"
-                value={formData.customerName}
-                onChange={handleChange}
-                placeholder="姓名 *"
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                required
-              />
-            </div>
-            <div>
-              <input
-                type="tel"
-                name="customerPhone"
-                value={formData.customerPhone}
-                onChange={handleChange}
-                placeholder="手机号 *"
-                maxLength={11}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                required
-              />
-            </div>
-          </div>
-
+        {/* 第一行：日期 */}
+        <div className="bg-white rounded-xl shadow-sm p-2.5 flex items-center justify-between">
+          <span className="text-gray-700 text-sm font-medium">日期 <span className="text-red-400">*</span></span>
           <input
-            type="text"
-            name="customerWechat"
-            value={formData.customerWechat}
+            type="date"
+            name="visitDate"
+            value={formData.visitDate}
             onChange={handleChange}
-            placeholder="微信号（选填）"
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+            min={getMinDate()}
+            className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+            required
           />
         </div>
 
-        {/* 参与人数 */}
-        <div className="bg-white rounded-xl shadow-sm p-3">
-          <h3 className="font-medium text-gray-800 text-sm flex items-center mb-2">
-            <span className="w-5 h-5 bg-emerald-100 rounded-full flex items-center justify-center mr-2 text-xs">2</span>
-            参与人数
-          </h3>
-
-          <div className="flex items-center justify-between py-1.5">
-            <span className="text-gray-700 text-sm">成人<span className="text-gray-400 text-xs ml-1">(4岁以上)</span></span>
-            <div className="flex items-center space-x-3">
-              <button
-                type="button"
-                onClick={() => handleAdultChange(-1)}
-                disabled={formData.adultCount <= 1}
-                className={`w-8 h-8 rounded-full flex items-center justify-center text-base font-medium ${
-                  formData.adultCount <= 1 ? 'bg-gray-100 text-gray-300' : 'bg-gray-100 text-gray-600 active:bg-gray-200'
-                }`}
-              >−</button>
-              <span className="w-6 text-center font-medium">{formData.adultCount}</span>
-              <button
-                type="button"
-                onClick={() => handleAdultChange(1)}
-                disabled={formData.adultCount >= 50}
-                className={`w-8 h-8 rounded-full flex items-center justify-center text-base font-medium ${
-                  formData.adultCount >= 50 ? 'bg-emerald-50 text-emerald-200' : 'bg-emerald-100 text-emerald-600 active:bg-emerald-200'
-                }`}
-              >+</button>
-            </div>
+        {/* 第二行：预约人数（标题+共X人）和 成人/儿童选择器 */}
+        <div className="bg-white rounded-xl shadow-sm p-2.5">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-gray-700 text-sm font-medium">预约人数</span>
+            <span className="text-emerald-600 text-sm font-medium">共 {formData.adultCount + formData.childCount} 人</span>
           </div>
-
-          <div className="flex items-center justify-between py-1.5 border-t border-gray-100">
-            <span className="text-gray-700 text-sm">儿童<span className="text-gray-400 text-xs ml-1">(4岁以下)</span></span>
-            <div className="flex items-center space-x-3">
-              <button
-                type="button"
-                onClick={() => handleChildChange(-1)}
-                disabled={formData.childCount <= 0}
-                className={`w-8 h-8 rounded-full flex items-center justify-center text-base font-medium ${
-                  formData.childCount <= 0 ? 'bg-gray-100 text-gray-300' : 'bg-gray-100 text-gray-600 active:bg-gray-200'
-                }`}
-              >−</button>
-              <span className="w-6 text-center font-medium">{formData.childCount}</span>
-              <button
-                type="button"
-                onClick={() => handleChildChange(1)}
-                disabled={formData.childCount >= 50}
-                className={`w-8 h-8 rounded-full flex items-center justify-center text-base font-medium ${
-                  formData.childCount >= 50 ? 'bg-emerald-50 text-emerald-200' : 'bg-emerald-100 text-emerald-600 active:bg-emerald-200'
-                }`}
-              >+</button>
+          <div className="flex items-center justify-between">
+            {/* 成人 */}
+            <div className="flex items-center space-x-2">
+              <span className="text-gray-600 text-xs">成人</span>
+              <button type="button" onClick={() => handleAdultChange(-1)} disabled={formData.adultCount <= 1}
+                className={`w-7 h-7 rounded-full flex items-center justify-center text-sm ${formData.adultCount <= 1 ? 'bg-gray-100 text-gray-300' : 'bg-gray-100 text-gray-600 active:bg-gray-200'}`}>−</button>
+              <span className="w-5 text-center text-sm font-medium">{formData.adultCount}</span>
+              <button type="button" onClick={() => handleAdultChange(1)} disabled={formData.adultCount >= 50}
+                className={`w-7 h-7 rounded-full flex items-center justify-center text-sm ${formData.adultCount >= 50 ? 'bg-emerald-50 text-emerald-200' : 'bg-emerald-100 text-emerald-600 active:bg-emerald-200'}`}>+</button>
             </div>
-          </div>
-
-          <div className="pt-1.5 border-t border-gray-100 text-center text-gray-500 text-xs">
-            共 <span className="font-medium text-gray-700">{formData.adultCount + formData.childCount}</span> 人
+            {/* 儿童 */}
+            <div className="flex items-center space-x-2">
+              <span className="text-gray-600 text-xs">儿童</span>
+              <button type="button" onClick={() => handleChildChange(-1)} disabled={formData.childCount <= 0}
+                className={`w-7 h-7 rounded-full flex items-center justify-center text-sm ${formData.childCount <= 0 ? 'bg-gray-100 text-gray-300' : 'bg-gray-100 text-gray-600 active:bg-gray-200'}`}>−</button>
+              <span className="w-5 text-center text-sm font-medium">{formData.childCount}</span>
+              <button type="button" onClick={() => handleChildChange(1)} disabled={formData.childCount >= 50}
+                className={`w-7 h-7 rounded-full flex items-center justify-center text-sm ${formData.childCount >= 50 ? 'bg-emerald-50 text-emerald-200' : 'bg-emerald-100 text-emerald-600 active:bg-emerald-200'}`}>+</button>
+            </div>
           </div>
         </div>
 
-        {/* 接送酒店 + 日期 并排 */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-white rounded-xl shadow-sm p-3">
-            <h3 className="font-medium text-gray-800 text-sm flex items-center mb-2">
-              <span className="w-5 h-5 bg-emerald-100 rounded-full flex items-center justify-center mr-2 text-xs">3</span>
-              接送酒店
-            </h3>
-            <input
-              type="text"
-              name="accommodationNotes"
-              value={formData.accommodationNotes}
-              onChange={handleChange}
-              placeholder="如：皇冠酒店801"
-              maxLength={100}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-            />
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm p-3">
-            <h3 className="font-medium text-gray-800 text-sm flex items-center mb-2">
-              <span className="w-5 h-5 bg-emerald-100 rounded-full flex items-center justify-center mr-2 text-xs">4</span>
-              日期 <span className="text-red-400 ml-0.5">*</span>
-            </h3>
-            <input
-              type="date"
-              name="visitDate"
-              value={formData.visitDate}
-              onChange={handleChange}
-              min={getMinDate()}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-              required
-            />
-            {specialDateWarning && (
-              <p className="mt-1 text-amber-600 text-xs">{specialDateWarning}</p>
-            )}
+        {/* 第三行：姓名 + 手机 */}
+        <div className="bg-white rounded-xl shadow-sm p-2.5">
+          <div className="grid grid-cols-2 gap-2">
+            <input type="text" name="customerName" value={formData.customerName} onChange={handleChange}
+              placeholder="姓名 *" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500" required />
+            <input type="tel" name="customerPhone" value={formData.customerPhone} onChange={handleChange}
+              placeholder="手机号 *" maxLength={11} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500" required />
           </div>
         </div>
 
-        {/* 选择套餐 */}
-        <div className="bg-white rounded-xl shadow-sm p-3">
-          <h3 className="font-medium text-gray-800 text-sm flex items-center mb-2">
-            <span className="w-5 h-5 bg-emerald-100 rounded-full flex items-center justify-center mr-2 text-xs">5</span>
-            选择套餐 <span className="text-red-400 ml-0.5">*</span>
-          </h3>
+        {/* 第四行：微信 + 接送酒店 */}
+        <div className="bg-white rounded-xl shadow-sm p-2.5">
+          <div className="grid grid-cols-2 gap-2">
+            <input type="text" name="customerWechat" value={formData.customerWechat} onChange={handleChange}
+              placeholder="微信号（选填）" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500" />
+            <input type="text" name="accommodationNotes" value={formData.accommodationNotes} onChange={handleChange}
+              placeholder="接送酒店（选填）" maxLength={100} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500" />
+          </div>
+        </div>
 
-          <div className="space-y-2">
+        {/* 第五行：选择套餐 */}
+        <div className="bg-white rounded-xl shadow-sm p-2.5">
+          <div className="text-gray-700 text-sm font-medium mb-2">选择套餐 <span className="text-red-400">*</span></div>
+          <div className="space-y-1.5">
             {packages.map((pkg) => (
-              <div
-                key={pkg.id}
-                onClick={() => handlePackageChange(pkg.id)}
-                className={`p-2.5 rounded-lg border-2 cursor-pointer transition-all ${
-                  formData.packageId === pkg.id
-                    ? 'border-emerald-500 bg-emerald-50'
-                    : 'border-gray-200 active:border-emerald-200'
-                }`}
-              >
+              <div key={pkg.id} onClick={() => handlePackageChange(pkg.id)}
+                className={`p-2 rounded-lg border-2 cursor-pointer transition-all ${formData.packageId === pkg.id ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200'}`}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
-                    <div className={`w-4 h-4 rounded-full border-2 mr-2 flex items-center justify-center ${
-                      formData.packageId === pkg.id ? 'border-emerald-500' : 'border-gray-300'
-                    }`}>
-                      {formData.packageId === pkg.id && (
-                        <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-                      )}
+                    <div className={`w-4 h-4 rounded-full border-2 mr-2 flex items-center justify-center ${formData.packageId === pkg.id ? 'border-emerald-500' : 'border-gray-300'}`}>
+                      {formData.packageId === pkg.id && <div className="w-2 h-2 rounded-full bg-emerald-500"></div>}
                     </div>
-                    <span className="font-medium text-sm">{pkg.name}</span>
+                    <span className="text-sm font-medium">{pkg.name}</span>
                   </div>
-                  <span className="text-emerald-600 font-medium text-sm">¥{pkg.price}/人</span>
+                  <span className="text-emerald-600 text-sm font-medium">¥{pkg.price}/人</span>
                 </div>
-                {pkg.description && (
-                  <p className="mt-1 text-xs text-gray-500 ml-6">{pkg.description}</p>
-                )}
-                {pkg.childPrice && pkg.childPrice !== pkg.price && (
-                  <p className="text-xs text-gray-400 ml-6">儿童¥{pkg.childPrice}/人</p>
-                )}
+                {pkg.description && <p className="text-xs text-gray-500 ml-6 mt-0.5">{pkg.description}</p>}
               </div>
             ))}
           </div>
         </div>
 
-        {/* 备注 */}
-        <div className="bg-white rounded-xl shadow-sm p-3">
-          <h3 className="font-medium text-gray-800 text-sm flex items-center mb-2">
-            <span className="w-5 h-5 bg-emerald-100 rounded-full flex items-center justify-center mr-2 text-xs">6</span>
-            备注
-          </h3>
-          <textarea
-            name="notes"
-            value={formData.notes}
-            onChange={handleChange}
-            placeholder="如有特殊需求请说明"
-            rows={2}
-            maxLength={500}
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none"
-          />
+        {/* 第六行：备注 */}
+        <div className="bg-white rounded-xl shadow-sm p-2.5">
+          <input type="text" name="notes" value={formData.notes} onChange={handleChange}
+            placeholder="备注（选填）" maxLength={500} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500" />
         </div>
 
-        {/* 费用明细 */}
+        {/* 费用明细 + 提交按钮 */}
         <div className="bg-gradient-to-r from-emerald-500 to-teal-500 rounded-xl p-3 text-white">
-          <div className="flex justify-between items-center text-sm">
-            <div>
-              <span>成人{pricePreview.adultCount}人×¥{pricePreview.adultPrice}</span>
-              {pricePreview.childCount > 0 && (
-                <span className="ml-2">+ 儿童{pricePreview.childCount}人×¥{pricePreview.childPrice}</span>
-              )}
+          <div className="flex justify-between items-center mb-2">
+            <div className="text-xs">
+              成人{pricePreview.adultCount}×¥{pricePreview.adultPrice}
+              {pricePreview.childCount > 0 && <span> + 儿童{pricePreview.childCount}×¥{pricePreview.childPrice}</span>}
             </div>
             <div className="text-right">
-              <span className="text-emerald-100 text-xs">合计</span>
-              <span className="text-xl font-bold ml-2">¥{pricePreview.totalAmount}</span>
+              <span className="text-emerald-100 text-xs">合计 </span>
+              <span className="text-xl font-bold">¥{pricePreview.totalAmount}</span>
             </div>
           </div>
+          <button type="submit" disabled={submitting}
+            className={`w-full py-2.5 rounded-lg font-medium text-sm transition-all ${submitting ? 'bg-white/30 cursor-not-allowed' : 'bg-white text-emerald-600 active:scale-[0.98]'}`}>
+            {submitting ? '提交中...' : '提交预约'}
+          </button>
         </div>
-
-        {/* 提交按钮 */}
-        <button
-          type="submit"
-          disabled={submitting}
-          className={`w-full py-3 rounded-xl font-medium text-base transition-all ${
-            submitting
-              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              : 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white active:scale-[0.98] shadow-lg shadow-emerald-200'
-          }`}
-        >
-          {submitting ? '提交中...' : '提交预约'}
-        </button>
       </form>
     </div>
   );
