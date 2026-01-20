@@ -213,18 +213,15 @@ const PublicBookingForm = () => {
           </div>
 
           {/* 联系信息 */}
-          <div className="grid grid-cols-2 gap-3 mb-3">
+          <div className="space-y-3 mb-3">
             <input type="text" name="customerName" value={formData.customerName} onChange={handleChange}
-              placeholder="姓名" className="bg-gray-50 rounded-xl px-4 py-3 text-base placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50" required />
+              placeholder="姓名" className="w-full bg-gray-50 rounded-xl px-4 py-3 text-base placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50" required />
             <input type="tel" name="customerPhone" value={formData.customerPhone} onChange={handleChange}
-              placeholder="手机号" maxLength={11} className="bg-gray-50 rounded-xl px-4 py-3 text-base placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50" required />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 mb-3">
+              placeholder="手机号" maxLength={11} className="w-full bg-gray-50 rounded-xl px-4 py-3 text-base placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50" required />
             <input type="text" name="customerWechat" value={formData.customerWechat} onChange={handleChange}
-              placeholder="微信号" className="bg-gray-50 rounded-xl px-4 py-3 text-base placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50" />
+              placeholder="微信号（选填）" className="w-full bg-gray-50 rounded-xl px-4 py-3 text-base placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50" />
             <input type="text" name="accommodationNotes" value={formData.accommodationNotes} onChange={handleChange}
-              placeholder="接送酒店" maxLength={100} className="bg-gray-50 rounded-xl px-4 py-3 text-base placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50" />
+              placeholder="接送酒店（选填）" maxLength={100} className="w-full bg-gray-50 rounded-xl px-4 py-3 text-base placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50" />
           </div>
 
           {/* 套餐选择 */}
