@@ -316,10 +316,13 @@ const PublicBookingForm = () => {
 
           {/* 日期 + 人数 */}
           <div className="flex gap-3 mb-3">
-            <div className="flex-1 bg-gray-50 rounded-xl p-3">
-              <div className="text-gray-500 text-xs mb-1.5">出行日期</div>
+            <div className="flex-1 bg-gray-50 rounded-xl p-3 relative overflow-hidden">
+              <div className="text-gray-500 text-xs mb-1.5 pointer-events-none">出行日期</div>
+              <div className="text-gray-800 text-base font-medium pointer-events-none">
+                {formData.visitDate ? formData.visitDate.replace(/-/g, '/') : '请选择日期'}
+              </div>
               <input type="date" name="visitDate" value={formData.visitDate} onChange={handleChange} min={getMinDate()}
-                className="w-full bg-transparent text-gray-800 text-base font-medium focus:outline-none" required />
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" style={{ fontSize: '16px' }} required />
             </div>
             <div className="flex-1 bg-gray-50 rounded-xl p-3">
               <div className="flex justify-between items-center mb-1.5">
