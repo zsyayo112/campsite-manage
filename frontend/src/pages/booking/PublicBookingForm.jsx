@@ -165,15 +165,15 @@ const PublicBookingForm = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-teal-400 via-emerald-400 to-green-500">
+    <div className="min-h-screen bg-gradient-to-br from-teal-400 via-emerald-400 to-green-500 flex flex-col items-center">
       {/* 头部 */}
-      <div className="text-white text-center py-3 px-4">
+      <div className="text-white text-center py-3 px-4 w-full">
         <h1 className="text-base font-bold drop-shadow-sm">原始森林一日营@长白山双溪森林营地</h1>
         <p className="text-white/80 text-xs">在线预约</p>
       </div>
 
       {/* 表单卡片 */}
-      <form onSubmit={handleSubmit} className="max-w-lg mx-3 bg-white/95 backdrop-blur rounded-2xl shadow-xl p-3 space-y-2">
+      <form onSubmit={handleSubmit} className="w-full max-w-md bg-white/95 backdrop-blur rounded-2xl shadow-xl mx-3 p-3 space-y-2">
         {error && (
           <div className="bg-red-50 text-red-500 px-3 py-1.5 rounded-lg text-xs">{error}</div>
         )}
